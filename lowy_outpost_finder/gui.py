@@ -288,7 +288,7 @@ class App(tk.Tk):
                 self.vars['version'].set('auto')
         if reset_output:
             stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-            self.vars['out'].set(str(ROOT / 'results' / f'{mode}-{stamp}.csv'))
+            self.vars['out'].set(str(PROJECT_ROOT / 'results' / f'{mode}-{stamp}.csv'))
         self.tips.configure(text=self.t('tip_' + mode))
         self.field_widgets['top'].configure(text=self.t('field_top_nearest') if mode == 'full-map' else self.t('field_top'))
         self.form_canvas.yview_moveto(0.0)
