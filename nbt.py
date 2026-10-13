@@ -147,13 +147,6 @@ class Region:
         self.f.seek(0, 2)
         self.length = self.f.tell()
         self.f.seek(0)
-        # Vanilla/Fabric may leave an empty region placeholder while a
-        # negative-coordinate region is being created.  It contains no
-        # chunks, so treating it as an empty region is safer and more useful
-        # than aborting an otherwise readable world scan.
-        if self.length == 0:
-            self.header = b'\x00' * 4096
-            return
         self.header = self.f.read(4096)
         if self.length < 8192 or len(self.header) != 4096:
             self.close()

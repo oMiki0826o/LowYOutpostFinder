@@ -1,14 +1,42 @@
+# v2.0.0 當次驗證紀錄（2026-10-13）
+
+本次檢查使用 Python 3.13.5、OpenJDK 21、Linux/Xvfb 及使用者提供的 Minecraft 1.21.8 `server.jar`，並未替使用者接受 EULA，**未**啟動 Minecraft 原版世界生成。所述「官方資料驗證」是唯讀 JAR 的版號／資源一致性檢查，不是原版生成端到端對拍。
+
+- `python3 -m compileall -q -x '(\.build|__pycache__)' .`：通過。
+- `python3 -m unittest discover -s tests -v`：**190 項，0 失敗、12 略過**（無桌面顯示器及可選情境）。
+- `xvfb-run -a python3 -m unittest discover -s tests -p 'test_gui_*.py' -v`：**9 項通過**；另執行 `test_v2_gui_progress.py`：**1 項通過**。
+- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：C 核心編譯成功，**高度仍屬試驗性近似**。
+- `python3 tests/check_placement.py bin/lowyoutpost`：5 組邊界及一般 Java 種子全部 PASS（只驗證候選亂數）。
+- `server-check --version 1.21.8 --server-jar <使用者提供的 JAR> --java java`：已識別遊戲 1.21.8、Java 21、原版放置常數一致，明確標示 `vanilla_world_generated=false`、`exact_seed_only_height_ready=false`。
+- `seed-geometry` 與 `candidates` 使用同版真實資源 JAR、種子 123、中心 (-1024, 2048)、半徑 8192，均得到 **122 筆**，彼此候選座標相同；`seed-geometry` 具有 `rotation/sample_x/sample_z` 而**沒有高度欄位**。
+- `worldgen-contract`：辨識 16 個密度函數資源、34 個 noise 參數資源，沒有 Noise 求值器。`jigsaw-contract`：辨識 4 個結構池、11 個模板、13 個連接相依，但**未模擬 Jigsaw 碰撞**。
+- 修復回歸：已先重現自訂搜尋中心的稽核結果重排失敗及 `seed-vanilla` 自訂中心候選被誤拒；修改後相關測試全部通過。
+
+**禁止擴大解釋：** 目前仍不能憑種子直接取得精確塔樓 Y；未完成完整 Noise/Aquifer/Biome/Jigsaw 與真實原版世界高度逐筆對拍；尚無修復後 Windows/macOS GitHub Actions 的實機執行結果。
+
+---
+
+# 1.0.1 發布候選版驗證紀錄 / Release-candidate validation
+
+執行日期：2026-10-13；基礎：GitHub `main` 1.0.0 程式架構與先前 2.13.0 工程版原始碼。本次交付為**尚未推送 GitHub** 的本地修復 ZIP。
+
+- `python3 -m compileall -q .`：通過。
+- `python3 -m unittest discover -s tests -q`：165 tests, 0 failures, 13 skipped（無顯示器／可選功能的條件性略過）。
+- `xvfb-run -a python3 -m unittest discover -s tests -v`：167 tests, 0 failures, 2 skipped（包含雙語 GUI）。
+- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：已使用上傳的第三方原始碼成功編譯原生 C 核心；發行 ZIP **不包含**第三方原始碼或編譯產物。
+- `python3 tests/check_placement.py bin/lowyoutpost`：5 組獨立 Java RNG 種子比較通過。
+- `python3 finder.py assets-audit --version 1.21.8 --server-jar <supplied-file>`：已成功讀取使用者提供的原版 1.21.8 JAR 資料（未啟動伺服器）。
+- `python3 finder.py candidates --version 1.21.8 --seed 123 --radius 8192`：輸出 118 筆候選。
+- `finder.py seed-vanilla ... --center-y-below nan`：預期拒絕 NaN，且未建立結果 CSV。
+- 另外加入早停門檻一致性、較近候選未完成不得聲稱最近，以及 GUI 表單收合等回歸測試。
+
+**仍未驗證：** 真正的 Mojang 原版伺服器生成／存檔端到端對拍、Windows/macOS 新版 CI 實機執行與完整的 seed-only Noise/Biome/Jigsaw 引擎。Python/Tk 測試及資源 JAR 離線檢查**不等於**原版演算法完全精確。
+
+---
+
 # 驗證紀錄 / Validation report — v2.13.0
 
 日期 / Date: 2026-10-13
-
-## GitHub 初始化前增量審核 / Pre-publication incremental audit
-
-- `python3 -m compileall -q -x '(\.build|__pycache__)' .`：exit 0。
-- `PYTHONPATH=.:tests python3 -m unittest -v ...`（排除需要桌面顯示的 Tk 測試）：**150 tests, 0 failures, 2 skipped**。略過項目需要未附加的可選 C backend。
-- 新增回歸案例確認：未指定新中心門檻的舊內部呼叫維持相容；指定 `structure_center_y < -37` 時只輸出符合門檻的已驗證塔樓。
-- `shasum -a 256 -c SHA256SUMS.txt`：修改後首次執行正確偵測 6 個舊雜湊；發布前重新產生清單並再次驗證。
-- Tk GUI 測試未在本機無虛擬顯示器環境重跑；GitHub Actions 保留 Linux `xvfb` 工作。未啟動 Minecraft/Fabric 伺服器，亦未生成實際世界。
 
 - `python3 -m unittest discover -s tests -q`：**157 cases, 0 failures, 10 skipped**；其中新增 13 項針對有限區域最低高度證明、幾何資料防誤判、世界修改中斷及待生成候選輸出。
 - `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：本機 C 核心編譯 exit 0。此核心只提供近似高度，不是精確 1.21.8 世界生成。

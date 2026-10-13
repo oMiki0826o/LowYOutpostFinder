@@ -45,6 +45,22 @@ class EnglishGuiTests(unittest.TestCase):
         app._apply_language()
         self.assertEqual(app.start_btn.cget('text'), 'Start search')
 
+    def test_collapsible_form_preserves_inputs_and_shows_results(self):
+        app = self.app
+        app.vars['seed'].set('34567')
+        self.assertTrue(app.form_visible)
+        app._toggle_form(visible=False)
+        app.update_idletasks()
+        self.assertFalse(app.form_container.winfo_ismapped())
+        self.assertEqual(app.vars['seed'].get(), '34567')
+        self.assertEqual(app.toggle_form_btn.cget('text'), 'Show search settings')
+        app.language.set('zh-TW')
+        app._apply_language()
+        self.assertIn('展開', app.toggle_form_btn.cget('text'))
+        app._toggle_form(visible=True)
+        app.update_idletasks()
+        self.assertTrue(app.form_canvas.winfo_ismapped())
+
     def test_english_csv_preview_columns(self):
         app = self.app
         with tempfile.TemporaryDirectory() as td:
@@ -60,7 +76,7 @@ class EnglishGuiTests(unittest.TestCase):
     def test_english_modes_fit_minimum_window_width(self):
         app = self.app
         app.geometry('810x720')
-        app.update_idletasks()
+        app.update()
         outer_right = app.winfo_rootx() + app.winfo_width()
         for widget in app.mode_widgets.values():
             self.assertGreater(widget.winfo_width(), 50)
@@ -71,7 +87,7 @@ class EnglishGuiTests(unittest.TestCase):
         app.mode.set('seed-vanilla')
         app._set_mode()
         app.geometry('810x570')
-        app.update_idletasks()
+        app.update()
         # Search controls and results must both be accessible at minimum window size.
         self.assertLess(app.start_btn.winfo_rooty() + app.start_btn.winfo_height(),
                         app.winfo_rooty() + app.winfo_height())

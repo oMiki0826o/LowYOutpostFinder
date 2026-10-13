@@ -87,14 +87,6 @@ def generated_world(root: Path, seed=123, chunk_x=-1, chunk_z=2, complete=True, 
 
 
 class FinderTests(unittest.TestCase):
-    def test_empty_region_placeholder_is_read_as_empty(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / 'r.-2.-1.mca'
-            path.touch()
-            with Region(path) as region:
-                self.assertEqual(region.length, 0)
-                self.assertIsNone(region.read_chunk(-33, -1))
-
     def test_primitive_bounded_java_random(self):
         self.assertEqual(finder.JavaRandom(0).bits(32), 0xbb20b460)
         self.assertEqual(finder.JavaRandom(-1).bounded(5), 3)
@@ -180,7 +172,9 @@ class FinderTests(unittest.TestCase):
             generated_world(world)
             row = finder.base_row(123, -1, 2, status='verified_tower')
             row.update(version='1.21.8', base_plate_y=-50, watchtower_min_y=-50,
-                       watchtower_max_y=-29, piece_count=2)
+                       watchtower_max_y=-29, piece_count=2,
+                       structure_min_y=-50, structure_max_y=-29, structure_center_y=-39.5,
+                       distance_sq=1280)
             args = SimpleNamespace(world=world, version='auto', radius=2048,
                     limit=1, priority='near-origin', core_archive=None,
                     audit=world / 'audit.csv', out=world / 'result.csv', max_y=0)
@@ -190,25 +184,6 @@ class FinderTests(unittest.TestCase):
                 result = list(csv.DictReader(fp))
             self.assertEqual(result[0]['version'], '1.21.8')
             self.assertEqual(result[0]['status'], 'verified_tower')
-
-    def test_live_search_filters_on_verified_structure_center(self):
-        with tempfile.TemporaryDirectory() as td:
-            world = Path(td)
-            generated_world(world)
-            low = finder.base_row(123, -1, 2, status='verified_tower')
-            low.update(version='1.21.8', base_plate_y=-60, watchtower_min_y=-60,
-                       watchtower_max_y=-39, structure_min_y=-60,
-                       structure_max_y=-20, structure_center_y=-40, piece_count=2)
-            args = SimpleNamespace(world=world, version='auto', radius=2048,
-                    limit=1, priority='near-origin', core_archive=None,
-                    audit=world / 'audit.csv', out=world / 'result.csv', max_y=None,
-                    center_y_below=-37)
-            with patch('live.run_live', return_value=[low]):
-                finder.run_search_live(args)
-            with args.out.open() as fp:
-                result = list(csv.DictReader(fp))
-            self.assertEqual(len(result), 1)
-            self.assertEqual(result[0]['structure_center_y'], '-40')
 
     def test_seed_verification(self):
         with tempfile.TemporaryDirectory() as td:

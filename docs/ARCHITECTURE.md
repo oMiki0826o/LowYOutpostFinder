@@ -48,8 +48,6 @@
 
 `seed-vanilla --priority terrain`（1.21.8 限定）將 `core_archive` 與 `terrain` 排序傳給既有 `run_search_live`，於生成任何候選區塊前執行低地形排序。此模式可能漏掉真正最低 Y，仍然必須經由原版存檔 `verified_tower` 檢查；`near-origin` 是預設的保守順序。
 
-`search-live` 與 `seed-vanilla` 的近原點流程會逐筆驗證候選，從所有已儲存結構片段的垂直包圍盒聯集計算 `structure_min_y`、`structure_max_y` 與 `structure_center_y`。CLI 預設只接受 `structure_center_y < -37`，找到第一個符合者後先釋放本工具新增的 force-load ticket，再停止後續生成。這是使用者指定的農場選址門檻，不等於遊戲原版定義的刷怪效率保證。
-
 `height_audit.py` 比較 `estimated_only` 與 `verified_tower` 的同一版號／種子／區塊，輸出絕對誤差、平均誤差與跳過數量，沒有虛構未驗證候選的高度。`scripts/benchmark.py` 實際量測位置與試驗性地形搜尋的耗時，不模擬、不預測原版 Java 的執行時間。
 
 完整的免生成算法尚未加入；技術規劃與必要的版本／Jigsaw 對拍條件列於 [精確引擎設計](EXACT_SEED_ENGINE.md)。

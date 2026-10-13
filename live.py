@@ -111,6 +111,12 @@ def run_live(args):
             signal.signal(signal.SIGTERM, previous)
 
 
+def check_checkpoint_path(checkpoint: Path | None, output: Path | None) -> None:
+    """Avoid colliding with the final result file during interrupted searches."""
+    if checkpoint is not None and output is not None and Path(checkpoint).resolve() == Path(output).resolve():
+        raise ValueError('checkpoint path must differ from output path')
+
+
 def _run_live(args):
     password = os.environ.get(args.password_env)
     if not password:
@@ -127,12 +133,26 @@ def _run_live(args):
             raise ValueError(f'CSV contains a non-candidate start at chunk {cx},{cz}; refusing to generate')
     if not 1 <= args.limit <= 256 or args.timeout < 5:
         raise ValueError('--limit must be between 1 and 256 and --timeout >= 5')
+    from search_conditions import accepted_tower
+    checkpoint = getattr(args, 'checkpoint', None)
+    check_checkpoint_path(checkpoint, args.out)
     out = []
+
+    def record(row):
+        out.append(row)
+        if checkpoint is not None:
+            # The checkpoint is a provisional audit, not a completion certificate.
+            # Recheck saved NBT on restart; never trust a checkpoint as vanilla evidence.
+            write_csv(Path(checkpoint), (dict(version=version_name, **r) for r in out), FIELDS)
     with WorldChunks(args.world) as saved, RCON(args.host, args.port, password) as server:
         seed_reply = re.sub(r'§.', '', server.command('seed'))
         seed_match = re.search(r'\bSeed\s*:\s*\[?(-?\d+)\]?', seed_reply, re.I)
         if seed_match is None or int(seed_match[1]) != seed:
             raise RCONError('RCON server seed does not match the selected world, or cannot be verified. Refusing to generate chunks.')
+        if checkpoint is not None:
+            # This file belongs to the current run. The persistent world, not
+            # a stale CSV from a different run, is the resume evidence.
+            write_csv(Path(checkpoint), [], FIELDS)
         for number, (_, cx, cz) in enumerate(selection[:args.limit], 1):
             x, z = cx * 16, cz * 16
             command_pos = f'{x} {z}'
@@ -142,15 +162,12 @@ def _run_live(args):
             except (OSError, ValueError) as exc:
                 raise RCONError(f'Failed to read cached origin chunk {command_pos}: {exc}') from exc
             if previous['status'] not in ('not_generated', 'not_full'):
-                out.append(previous)
+                record(previous)
                 print(f'[{number}/{min(len(selection), args.limit)}] {cx},{cz} : '
                       f'{previous["status"]} (already saved)', file=sys.stderr)
-                threshold = getattr(args, 'stop_center_y_below', None)
-                if (previous['status'] == 'verified_tower' and threshold is not None
-                        and previous['structure_center_y'] != ''
-                        and float(previous['structure_center_y']) < threshold):
-                    print(f'Accepted nearest saved outpost: structure_center_y='
-                          f'{previous["structure_center_y"]} < {threshold}', file=sys.stderr)
+                if accepted_tower(previous, center_below=getattr(args, 'stop_center_y_below', None),
+                                  max_y=getattr(args, 'stop_max_y', None)) and (
+                                      getattr(args, 'stop_center_y_below', None) is not None):
                     break
                 continue
             already = query_marked(server.command(f'execute in minecraft:overworld run forceload query {command_pos}'))
@@ -182,22 +199,23 @@ def _run_live(args):
                 if row is None or row['status'] in ('not_generated', 'not_full'):
                     row = examine(None, seed, cx, cz, data_version=data_version)
                     row.update(status='timeout', reason='Chunk failed to become FULL on disk by timeout')
-                out.append(row)
+                record(row)
                 print(f'[{number}/{min(len(selection), args.limit)}] {cx},{cz} : {row["status"]}', file=sys.stderr)
-                threshold = getattr(args, 'stop_center_y_below', None)
-                accepted = (row['status'] == 'verified_tower' and threshold is not None
-                            and row['structure_center_y'] != ''
-                            and float(row['structure_center_y']) < threshold)
+                accepted = (getattr(args, 'stop_center_y_below', None) is not None and
+                            accepted_tower(row, center_below=args.stop_center_y_below,
+                                           max_y=getattr(args, 'stop_max_y', None)))
             finally:
                 if loaded_by_us:
                     server.command(f'execute in minecraft:overworld run forceload remove {command_pos}')
             if accepted:
-                print(f'Accepted nearest verified outpost: structure_center_y='
-                      f'{row["structure_center_y"]} < {threshold}', file=sys.stderr)
+                print(f'Accepted verified tower at chunk {cx},{cz}; '
+                      'all requested thresholds satisfied.', file=sys.stderr)
                 break
+    # The caller's completeness proof relies on the ORIGINAL candidate order.
+    # Sort only the human-readable CSV; never reorder the returned audit rows.
     out = [dict(version=version_name, **row) for row in out]
-    out.sort(key=lambda r: (r['distance_sq'], r['chunk_x'], r['chunk_z']))
-    write_csv(args.out, out, FIELDS)
+    sorted_for_csv = sorted(out, key=lambda r: (r['distance_sq'], int(r['chunk_x']), int(r['chunk_z'])))
+    write_csv(args.out, sorted_for_csv, FIELDS)
     return out
 
 
@@ -214,4 +232,5 @@ def add_live_command(commands):
     a.add_argument('--limit', type=int, default=50)
     a.add_argument('--timeout', type=int, default=180, help='每個區塊驗證超時秒數')
     a.add_argument('--out', type=Path)
+    a.add_argument('--checkpoint', type=Path, help='每筆原版存檔核對完成後保存稽核進度')
     a.set_defaults(run=run_live)

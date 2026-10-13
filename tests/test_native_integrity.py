@@ -2,6 +2,7 @@
 Modification: 2026-10-13 — reject incorrect or misleading external sampler data.
 """
 import csv
+import os
 from pathlib import Path
 import tempfile
 import threading
@@ -38,11 +39,13 @@ class NativeIntegrityTests(unittest.TestCase):
         pause.set()
         return explorer._one(123, threading.Event(), pause)
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX shell fixture; Windows executable support tested separately')
     def test_valid_native_sample_preserves_provisional_status(self):
         with tempfile.TemporaryDirectory() as directory:
             rows = self._scan(self._fake_binary(directory, self._row()))
             self.assertEqual(rows[0]['classification'], 'estimated_only')
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX shell fixture; Windows executable support tested separately')
     def test_wrong_seed_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             row = self._row()
@@ -50,6 +53,7 @@ class NativeIntegrityTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'seed'):
                 self._scan(self._fake_binary(directory, row))
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX shell fixture; Windows executable support tested separately')
     def test_wrong_version_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             row = self._row()
@@ -57,6 +61,7 @@ class NativeIntegrityTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'version'):
                 self._scan(self._fake_binary(directory, row))
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX shell fixture; Windows executable support tested separately')
     def test_not_actual_candidate_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             row = self._row()
@@ -65,6 +70,7 @@ class NativeIntegrityTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'candidate'):
                 self._scan(self._fake_binary(directory, row))
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX shell fixture; Windows executable support tested separately')
     def test_invalid_sample_y_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             row = self._row()

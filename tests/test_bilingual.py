@@ -38,7 +38,7 @@ class TranslationTests(unittest.TestCase):
         self.assertIn('--top', args)
         self.assertIn('17', args)
         self.assertIn('--core-archive', args)
-        self.assertIn('/tmp/core.tar.gz', args)
+        self.assertIn(str(Path('/tmp/core.tar.gz')), args)
         with self.assertRaisesRegex(ValueError, '1.21.8'):
             build_arguments(SearchRequest(
                 mode='estimate', version='26.3', out='r.csv'), language='en-US')

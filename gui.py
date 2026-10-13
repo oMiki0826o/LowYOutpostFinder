@@ -10,6 +10,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -25,7 +26,7 @@ from versions import VERSIONS
 ROOT = Path(__file__).resolve().parent
 PROJECT_VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 MODES = [(key, 'mode_' + key) for key in
-         ('candidates', 'estimate', 'world', 'verify', 'search-live', 'seed-vanilla')]
+         ('candidates', 'full-map', 'seed-geometry', 'estimate', 'world', 'verify', 'search-live', 'seed-vanilla')]
 
 
 
@@ -55,6 +56,8 @@ class App(tk.Tk):
         self._apply_language()
         self._poll_id = self.after(100, self._poll)
         self.protocol('WM_DELETE_WINDOW', self._on_close)
+        self.bind('<F1>', lambda _event: self._show_help())
+        self.bind('<Control-Return>', lambda _event: self._start())
 
     def t(self, key: str, **values) -> str:
         return tr(self.language.get(), key, **values)
@@ -69,7 +72,7 @@ class App(tk.Tk):
         style.configure('Header.TLabel', font=('Arial', 19, 'bold'))
         style.configure('Subtitle.TLabel', font=('Arial', 10), foreground='#587076')
         style.configure('Title.TLabel', font=('Arial', 10, 'bold'))
-        style.configure('TButton', padding=(11, 6))
+        style.configure('TButton', padding=(6, 4))
         style.configure('Start.TButton', background='#236e69', foreground='white', font=('Arial', 10, 'bold'))
         style.map('Start.TButton', background=[('active', '#18534e'), ('disabled', '#a1adab')])
         style.configure('Treeview', rowheight=25, background='white', fieldbackground='white')
@@ -77,22 +80,22 @@ class App(tk.Tk):
         style.configure('Horizontal.TProgressbar', background='#3f948b')
 
     def _build(self):
-        root = ttk.Frame(self, padding=16)
+        root = ttk.Frame(self, padding=10)
         root.pack(fill='both', expand=True)
         ttk.Label(root, text='LowYOutpostFinder', style='Header.TLabel').pack(anchor='w')
         self.subtitle = ttk.Label(root, style='Subtitle.TLabel')
-        self.subtitle.pack(anchor='w', pady=(2, 12))
+        self.subtitle.pack(anchor='w', pady=(2, 4))
         top = ttk.Frame(root)
         top.pack(fill='x')
         self.mode_label = ttk.Label(top, style='Title.TLabel')
         self.mode_label.pack(side='left', padx=(0, 12))
-        mode_rows = (ttk.Frame(top), ttk.Frame(top))
+        mode_rows = tuple(ttk.Frame(top) for _ in range((len(MODES) + 1) // 2))
         for mode_row in mode_rows:
             mode_row.pack(fill='x')
         for index, (key, _label) in enumerate(MODES):
-            widget = ttk.Radiobutton(mode_rows[index // 3], value=key,
+            widget = ttk.Radiobutton(mode_rows[index // 2], value=key,
                                      variable=self.mode, command=self._set_mode)
-            widget.pack(side='left', padx=3)
+            widget.pack(side='left', padx=(0, 18), anchor='w')
             self.mode_widgets[key] = widget
         locale = ttk.Frame(root)
         locale.pack(fill='x', pady=(9, 0))
@@ -102,10 +105,14 @@ class App(tk.Tk):
                                            values=('zh-TW', 'en-US'), width=12)
         self.language_combo.pack(side='left')
         self.language_combo.bind('<<ComboboxSelected>>', self._apply_language)
-        ttk.Separator(root).pack(fill='x', pady=10)
+        self.form_visible = True
+        self.toggle_form_btn = ttk.Button(locale, command=self._toggle_form)
+        self.toggle_form_btn.pack(side='right')
+        ttk.Separator(root).pack(fill='x', pady=5)
         form_container = ttk.Frame(root)
         form_container.pack(fill='x')
-        self.form_canvas = tk.Canvas(form_container, height=228, highlightthickness=0,
+        self.form_container = form_container
+        self.form_canvas = tk.Canvas(form_container, height=154, highlightthickness=0,
                                      bg='#f4f7f7', borderwidth=0)
         form_scroll = ttk.Scrollbar(form_container, orient='vertical',
                                      command=self.form_canvas.yview)
@@ -118,18 +125,22 @@ class App(tk.Tk):
         self.form_canvas.bind('<Configure>', self._resize_form_window)
         defaults = {
             'seed': '123', 'version': '1.21.8', 'radius': '8192',
-            'world': '', 'candidates': '', 'max_y': '', 'limit': '50',
+            'center_x': '0', 'center_z': '0',
+            'world': '', 'candidates': '', 'max_y': '', 'limit': '50', 'offset': '0',
             'timeout': '180', 'port': '25575', 'password': '', 'out': '',
-            'top': '25', 'core_archive': '', 'game_jar': '', 'server_jar': '',
+            'top': '25', 'center_y_below': '-37', 'core_archive': '', 'game_jar': '', 'server_jar': '',
             'java': 'java', 'memory': '2048', 'startup_timeout': '300',
-            'priority': 'near-origin'
+            'priority': 'near-origin', 'sort_by': 'distance',
+            'scan_strategy': 'nearest', 'scan_engine': 'auto', 'batch_regions': '500000', 'cpu_rest_ms': '150'
         }
         for name, value in defaults.items():
             self.vars[name] = tk.StringVar(value=value)
         self.vars['eula_accepted'] = tk.BooleanVar(value=False)
-        fields = ('version', 'seed', 'radius', 'world', 'candidates', 'max_y',
-                  'top', 'core_archive', 'game_jar', 'server_jar', 'java', 'memory', 'startup_timeout',
-                  'eula_accepted', 'priority', 'limit', 'timeout', 'port', 'password', 'out')
+        self.vars['resume'] = tk.BooleanVar(value=False)
+        fields = ('version', 'seed', 'radius', 'center_x', 'center_z', 'world', 'candidates', 'max_y',
+                  'top', 'center_y_below', 'core_archive', 'game_jar', 'server_jar', 'java', 'memory', 'startup_timeout',
+                  'eula_accepted', 'priority', 'sort_by', 'scan_strategy', 'scan_engine', 'batch_regions', 'cpu_rest_ms', 'resume',
+                  'limit', 'offset', 'timeout', 'port', 'password', 'out')
         for row_index, field in enumerate(fields):
             line = ttk.Frame(self.form)
             line.pack(fill='x', pady=3)
@@ -137,9 +148,21 @@ class App(tk.Tk):
             label = ttk.Label(line, width=31)
             label.pack(side='left')
             self.field_widgets[field] = label
-            if field == 'eula_accepted':
+            if field in ('eula_accepted', 'resume'):
                 widget = ttk.Checkbutton(line, variable=self.vars[field])
                 widget.pack(side='left', anchor='w')
+            elif field == 'sort_by':
+                widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
+                                      values=('distance', 'base-y', 'tower-y'), width=21)
+                widget.pack(side='left', fill='x', expand=True, padx=(0, 6))
+            elif field == 'scan_strategy':
+                widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
+                                      values=('nearest', 'exhaustive'), width=21)
+                widget.pack(side='left', fill='x', expand=True, padx=(0, 6))
+            elif field == 'scan_engine':
+                widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
+                                      values=('auto', 'python', 'native'), width=21)
+                widget.pack(side='left', fill='x', expand=True, padx=(0, 6))
             elif field == 'priority':
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
                                       values=('near-origin', 'terrain'), width=21)
@@ -173,31 +196,43 @@ class App(tk.Tk):
                     self.browse_widgets[field].pack(side='left')
         self.tips = ttk.Label(root, text='', wraplength=1000, justify='left', style='Subtitle.TLabel')
         self.tips.pack(fill='x', pady=(10, 7))
+        # Two toolbar rows remain usable on 810px laptops and with Windows fonts.
         actions = ttk.Frame(root)
-        actions.pack(fill='x', pady=2)
+        actions.pack(fill='x', pady=(2, 0))
         self.start_btn = ttk.Button(actions, style='Start.TButton', command=self._start)
         self.start_btn.pack(side='left')
-        self.advanced_btn = ttk.Button(actions, command=self._advanced)
-        self.advanced_btn.pack(side='left', padx=7)
         self.stop_btn = ttk.Button(actions, command=self._stop, state='disabled')
-        self.stop_btn.pack(side='left', padx=9)
-        self.folder_btn = ttk.Button(actions, command=self._open_folder)
+        self.stop_btn.pack(side='left', padx=7)
+        self.advanced_btn = ttk.Button(actions, command=self._advanced)
+        self.advanced_btn.pack(side='left', padx=5)
+        secondary = ttk.Frame(root)
+        secondary.pack(fill='x', pady=(2, 0))
+        self.folder_btn = ttk.Button(secondary, command=self._open_folder)
         self.folder_btn.pack(side='left')
-        self.copy_btn = ttk.Button(actions, command=self._save_copy)
-        self.copy_btn.pack(side='left', padx=6)
-        self.progress = ttk.Progressbar(actions, mode='indeterminate', length=125)
+        self.copy_btn = ttk.Button(secondary, command=self._save_copy)
+        self.copy_btn.pack(side='left', padx=7)
+        self.help_btn = ttk.Button(secondary, command=self._show_help)
+        self.help_btn.pack(side='left', padx=6)
+        self.progress = ttk.Progressbar(secondary, mode='indeterminate', length=125)
         self.progress.pack(side='right')
         ttk.Label(root, textvariable=self.banner, style='Subtitle.TLabel', wraplength=1000).pack(
             fill='x', pady=(7, 5))
-        results = ttk.Panedwindow(root, orient='vertical')
-        results.pack(fill='both', expand=True)
+        results = ttk.Notebook(root)
+        results.pack(fill='both', expand=True, pady=(3, 0))
+        self.results_tabs = results
         preview = ttk.Frame(results)
-        results.add(preview, weight=4)
+        results.add(preview, text='Results')
         self.preview_label = ttk.Label(preview, style='Title.TLabel')
         self.preview_label.pack(anchor='w')
+        self.preview_count = tk.StringVar(value='')
+        ttk.Label(preview, textvariable=self.preview_count, style='Subtitle.TLabel').pack(anchor='w')
         grid_frame = ttk.Frame(preview)
         grid_frame.pack(fill='both', expand=True, pady=(4, 0))
         self.grid = ttk.Treeview(grid_frame, show='headings', height=7)
+        self.grid.tag_configure('verified_tower', foreground='#165e50')
+        self.grid.tag_configure('estimated_only', foreground='#805000')
+        self.grid.tag_configure('placement_candidate', foreground='#516470')
+        self.grid.tag_configure('error', foreground='#a12828')
         self.grid.pack(side='left', fill='both', expand=True)
         y = ttk.Scrollbar(grid_frame, orient='vertical', command=self.grid.yview)
         y.pack(side='right', fill='y')
@@ -205,7 +240,7 @@ class App(tk.Tk):
         x.pack(fill='x')
         self.grid.configure(yscrollcommand=y.set, xscrollcommand=x.set)
         logs = ttk.Frame(results)
-        results.add(logs, weight=1)
+        results.add(logs, text='Logs')
         self.logs_label = ttk.Label(logs, style='Title.TLabel')
         self.logs_label.pack(anchor='w')
         self.log_text = tk.Text(logs, font=('Menlo', 9), height=5, wrap='word',
@@ -222,15 +257,18 @@ class App(tk.Tk):
     def _set_mode(self, *, reset_output: bool = True):
         mode = self.mode.get()
         visibility = {
-            'candidates': {'version', 'seed', 'radius', 'out'},
-            'estimate': {'version', 'seed', 'radius', 'max_y', 'top', 'core_archive', 'game_jar', 'out'},
+            'candidates': {'version', 'seed', 'radius', 'center_x', 'center_z', 'out'},
+            'full-map': {'version', 'seed', 'center_x', 'center_z', 'top', 'scan_strategy', 'scan_engine',
+                         'batch_regions', 'cpu_rest_ms', 'resume', 'out'},
+            'seed-geometry': {'version', 'seed', 'radius', 'center_x', 'center_z', 'game_jar', 'out'},
+            'estimate': {'version', 'seed', 'radius', 'max_y', 'top', 'center_y_below', 'core_archive', 'game_jar', 'out'},
             'world': {'version', 'world', 'max_y', 'out'},
             'verify': {'version', 'world', 'candidates', 'out'},
-            'search-live': {'version', 'world', 'radius', 'max_y', 'limit',
-                            'timeout', 'port', 'password', 'out'},
-            'seed-vanilla': {'version', 'seed', 'radius', 'server_jar', 'java', 'memory',
+            'search-live': {'version', 'world', 'radius', 'center_x', 'center_z', 'max_y', 'limit', 'offset',
+                            'timeout', 'port', 'password', 'center_y_below', 'sort_by', 'out'},
+            'seed-vanilla': {'version', 'seed', 'radius', 'center_x', 'center_z', 'server_jar', 'java', 'memory',
                              'startup_timeout', 'eula_accepted', 'priority', 'core_archive', 'game_jar',
-                             'limit', 'timeout', 'max_y', 'out'},
+                             'limit', 'offset', 'timeout', 'max_y', 'center_y_below', 'sort_by', 'out'},
         }
         for key, widget in self.groups.items():
             widget.pack_forget()
@@ -241,7 +279,7 @@ class App(tk.Tk):
             self.vars['version'].set('1.21.8')
             if not self.vars['max_y'].get().strip():
                 self.vars['max_y'].set('64')
-        elif mode in ('candidates', 'seed-vanilla'):
+        elif mode in ('candidates', 'seed-vanilla', 'seed-geometry', 'full-map'):
             self.version_combo.configure(values=[v.id for v in VERSIONS])
             if self.vars['version'].get() == 'auto':
                 self.vars['version'].set('1.21.8')
@@ -253,6 +291,7 @@ class App(tk.Tk):
             stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
             self.vars['out'].set(str(ROOT / 'results' / f'{mode}-{stamp}.csv'))
         self.tips.configure(text=self.t('tip_' + mode))
+        self.field_widgets['top'].configure(text=self.t('field_top_nearest') if mode == 'full-map' else self.t('field_top'))
         self.form_canvas.yview_moveto(0.0)
         self._resize_form_scroll()
 
@@ -261,6 +300,7 @@ class App(tk.Tk):
         self.subtitle.configure(text=self.t('subtitle'))
         self.mode_label.configure(text=self.t('mode_caption'))
         self.language_label.configure(text=self.t('language_caption'))
+        self.toggle_form_btn.configure(text=self.t('collapse_form' if self.form_visible else 'expand_form'))
         for mode, _key in MODES:
             self.mode_widgets[mode].configure(text=self.t('mode_' + mode))
         for field, widget in self.field_widgets.items():
@@ -270,8 +310,11 @@ class App(tk.Tk):
         for key, widget in (
             ('start', self.start_btn), ('advanced', self.advanced_btn), ('stop', self.stop_btn),
             ('open_folder', self.folder_btn), ('save_copy', self.copy_btn),
+            ('help', self.help_btn),
             ('preview_label', self.preview_label), ('logs_label', self.logs_label)):
             widget.configure(text=self.t(key))
+        self.results_tabs.tab(0, text=self.t('tab_results'))
+        self.results_tabs.tab(1, text=self.t('tab_logs'))
         self._set_mode(reset_output=False)
         for child in self.winfo_children():
             if isinstance(child, AdvancedWindow):
@@ -283,6 +326,34 @@ class App(tk.Tk):
         for field in columns:
             self.grid.heading(field, text=self.t('column_' + field)
                               if 'column_' + field in CATALOGS[self.language.get()] else field)
+
+    def _toggle_form(self, visible: bool | None = None):
+        """Let results use the small-screen viewport without losing form values."""
+        show = (not self.form_visible) if visible is None else bool(visible)
+        if show != self.form_visible:
+            if show:
+                self.form_container.pack(fill='x', before=self.tips)
+            else:
+                self.form_container.pack_forget()
+            self.form_visible = show
+        self.toggle_form_btn.configure(text=self.t('collapse_form' if show else 'expand_form'))
+
+    def _show_help(self):
+        """Open a read-only, bilingual quick-start guide without leaving the app."""
+        window = tk.Toplevel(self)
+        window.title(self.t('help_title'))
+        window.geometry('650x480')
+        window.minsize(420, 330)
+        frame = ttk.Frame(window, padding=15)
+        frame.pack(fill='both', expand=True)
+        text_box = tk.Text(frame, wrap='word', font=('Arial', 11), padx=12, pady=12)
+        text_box.pack(side='left', fill='both', expand=True)
+        scrollbar = ttk.Scrollbar(frame, orient='vertical', command=text_box.yview)
+        scrollbar.pack(side='right', fill='y')
+        text_box.configure(yscrollcommand=scrollbar.set)
+        text_box.insert('1.0', self.t('help_text'))
+        text_box.configure(state='disabled')
+        window.transient(self)
 
     def _advanced(self):
         window = AdvancedWindow(self, language=self.language.get())
@@ -300,7 +371,7 @@ class App(tk.Tk):
 
     def _browse_core_archive(self):
         path = filedialog.askopenfilename(title=self.t('dialog_core_archive'),
-                filetypes=[('Compressed tar archive', '*.tar.gz'), ('All files', '*')])
+                filetypes=[('Source archive ZIP', '*.zip'), ('Compressed tar archive', '*.tar.gz'), ('All files', '*')])
         if path:
             self.vars['core_archive'].set(path)
 
@@ -346,8 +417,10 @@ class App(tk.Tk):
                 return
         self.last_output = None
         self.cancel_requested.clear()
+        self.results_tabs.select(1)  # Streaming log is visible during a long-running job.
         self.start_btn.configure(state='disabled')
         self.stop_btn.configure(state='normal')
+        self.progress.configure(mode='indeterminate', value=0)
         self.progress.start(12)
         self.banner.set(self.t('banner_running'))
         # Intentionally avoid printing argv or including RCON credentials in logs.
@@ -415,12 +488,34 @@ class App(tk.Tk):
         else:
             self.destroy()
 
+    def _update_progress_from_log(self, line: str) -> None:
+        """Display measured candidate progress, never an invented worldgen percentage."""
+        full = re.match(r'^FULLMAP_PROGRESS (\d+) (\d+) (\d+) (complete|incomplete)', line.strip())
+        if full:
+            current, total, matched = map(int, full.group(1, 2, 3))
+            if 0 <= current <= total and total > 0:
+                self.progress.stop()
+                self.progress.configure(mode='determinate', maximum=total, value=current)
+                self.banner.set(self.t('banner_fullmap_progress', checked=f'{current:,}',
+                                       total=f'{total:,}', matched=f'{matched:,}'))
+            return
+        match = re.match(r'^\[(\d+)/(\d+)\]', line.strip())
+        if match is None:
+            return
+        current, total = int(match[1]), int(match[2])
+        if total < 1 or not (0 <= current <= total):
+            return
+        self.progress.stop()
+        self.progress.configure(mode='determinate', maximum=total, value=current)
+        self.banner.set(self.t('banner_progress', checked=current, total=total))
+
     def _poll(self):
         try:
             while True:
                 event = self.events.get_nowait()
                 if event[0] == 'log':
                     self._log(event[1])
+                    self._update_progress_from_log(event[1])
                 elif event[0] == 'error':
                     self._complete()
                     self.banner.set(self.t('launch_failed', error=event[1]))
@@ -432,6 +527,8 @@ class App(tk.Tk):
                         self.last_output = Path(path).expanduser()
                         try:
                             count, shown = self._preview(self.last_output)
+                            self._toggle_form(visible=False)
+                            self.results_tabs.select(0)
                             self.banner.set(self.t('done', count=count, shown=shown, path=self.last_output))
                         except (OSError, UnicodeError, csv.Error) as exc:
                             self.banner.set(self.t('preview_failed', error=exc))
@@ -451,6 +548,7 @@ class App(tk.Tk):
     def _preview(self, path: Path) -> tuple[int, int]:
         for child in self.grid.get_children():
             self.grid.delete(child)
+        self.preview_count.set('')
         with path.open('r', encoding='utf-8-sig', newline='') as handle:
             reader = csv.DictReader(handle)
             fields = reader.fieldnames or []
@@ -462,8 +560,15 @@ class App(tk.Tk):
             count = 0
             for row in reader:
                 if count < 500:
-                    self.grid.insert('', 'end', values=[row.get(col, '') for col in fields])
+                    status = str(row.get('status') or row.get('classification') or '')
+                    tag = (status if status in ('verified_tower', 'estimated_only',
+                                                'placement_candidate') else
+                           'error' if status in ('invalid_nbt', 'timeout', 'version_mismatch',
+                                                  'invalid_region') else '')
+                    self.grid.insert('', 'end', values=[row.get(col, '') for col in fields],
+                                     tags=(tag,) if tag else ())
                 count += 1
+        self.preview_count.set(self.t('preview_count', count=count, shown=min(count, 500)))
         return count, min(count, 500)
 
     def _open_folder(self):

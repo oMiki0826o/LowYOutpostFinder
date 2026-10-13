@@ -43,7 +43,7 @@ class ReleaseTests(unittest.TestCase):
             root = Path(td) / 'project'
             root.mkdir()
             (root / 'VERSION').write_text('2.1.0\n')
-            (root / 'hello.txt').write_text('hello\n')
+            (root / 'hello.txt').write_bytes(b'hello\n')
             out = Path(td) / 'out.zip'
             package(root, out)
             with zipfile.ZipFile(out) as z:

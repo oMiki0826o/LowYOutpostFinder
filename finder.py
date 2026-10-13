@@ -16,6 +16,7 @@ import sys
 from typing import Iterator
 import tempfile
 import heapq
+import math
 from types import SimpleNamespace
 
 from nbt import NBTError, REGION_NAME, Region, load_level, region_filename
@@ -28,8 +29,7 @@ OUTPOST = (32, 8, 165745296)
 VILLAGE = (34, 8, 10387312)
 FIELDS = ('version', 'seed', 'chunk_x', 'chunk_z', 'x', 'z', 'status', 'base_plate_y',
           'watchtower_min_y', 'watchtower_max_y', 'piece_count',
-          'structure_min_y', 'structure_max_y', 'structure_center_y',
-          'distance_sq', 'data_version', 'reason')
+          'structure_min_y', 'structure_max_y', 'structure_center_y', 'distance_sq', 'data_version', 'reason', 'search_distance_sq')
 CANDIDATE_FIELDS = ('version', 'seed', 'chunk_x', 'chunk_z', 'x', 'z', 'classification')
 
 
@@ -84,19 +84,35 @@ def pass_village_exclusion(seed: int, cx: int, cz: int) -> bool:
     return True
 
 
-def candidates(seed: int, radius: int) -> Iterator[dict]:
+def candidates(seed: int, radius: int, *, center_x: int = 0, center_z: int = 0) -> Iterator[dict]:
+    """Enumerate structure placement attempts inside a square around (center_x, center_z).
+
+    The square filters block coordinates of candidate START chunks. The region
+    bounds include the entire possible 24-chunk random spread offset, including
+    negative region indices, so no valid candidate is skipped at its edges.
+    This is placement ONLY; terrain and biome existence remain unverified.
+    """
     if radius < 0 or radius > 30_000_000:
         raise ValueError('--radius must be in 0..30000000')
-    rlo, rhi = -radius // 512, radius // 512
-    regions = (rhi - rlo + 1) ** 2
+    if not all(type(v) is int and -30_000_000 <= v <= 30_000_000
+               for v in (center_x, center_z)):
+        raise ValueError('--center-x and --center-z must be integer blocks in ±30000000')
+    spacing, separation, _salt = OUTPOST
+    cell_blocks = spacing * 16
+    largest_offset = (spacing - separation - 1) * 16
+    xlo = (center_x - radius - largest_offset) // cell_blocks
+    xhi = (center_x + radius) // cell_blocks
+    zlo = (center_z - radius - largest_offset) // cell_blocks
+    zhi = (center_z + radius) // cell_blocks
+    regions = (xhi - xlo + 1) * (zhi - zlo + 1)
     if regions > MAX_CANDIDATE_REGIONS:
         raise ValueError(f'Search covers {regions:,} regions (maximum {MAX_CANDIDATE_REGIONS:,}); '
                          'reduce --radius or split the area into smaller searches')
-    for rz in range(rlo, rhi + 1):
-        for rx in range(rlo, rhi + 1):
+    for rz in range(zlo, zhi + 1):
+        for rx in range(xlo, xhi + 1):
             cx, cz = region_position(seed, rx, rz, OUTPOST)
             x, z = cx * 16, cz * 16
-            if not -radius <= x <= radius or not -radius <= z <= radius:
+            if not center_x - radius <= x <= center_x + radius or not center_z - radius <= z <= center_z + radius:
                 continue
             if pass_legacy_frequency(seed, cx, cz) and pass_village_exclusion(seed, cx, cz):
                 yield dict(seed=seed, chunk_x=cx, chunk_z=cz, x=x, z=z,
@@ -109,6 +125,16 @@ def is_candidate_start(seed: int, cx: int, cz: int) -> bool:
     return (region_position(seed, rx, rz, OUTPOST) == (cx, cz)
             and pass_legacy_frequency(seed, cx, cz)
             and pass_village_exclusion(seed, cx, cz))
+
+
+def finite_y(value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError('Y threshold must be numeric') from exc
+    if not math.isfinite(number):
+        raise argparse.ArgumentTypeError('Y threshold must be finite')
+    return number
 
 
 def signed_seed(value: str) -> int:
@@ -207,8 +233,7 @@ def base_row(seed: int, cx: int, cz: int, status='unverified', reason='') -> dic
             'z': cz * 16, 'status': status, 'base_plate_y': '',
             'watchtower_min_y': '', 'watchtower_max_y': '',
             'piece_count': '', 'structure_min_y': '', 'structure_max_y': '',
-            'structure_center_y': '', 'distance_sq': cx * cx * 256 + cz * cz * 256,
-            'data_version': '', 'reason': reason}
+            'structure_center_y': '', 'distance_sq': cx * cx * 256 + cz * cz * 256, 'data_version': '', 'reason': reason}
 
 
 def examine(chunk: dict | None, seed: int, cx: int, cz: int, *, data_version: int = 4440) -> dict:
@@ -334,7 +359,9 @@ def run_candidates(args):
         from game_archive import require_matching_game_version
         require_matching_game_version(args.game_jar, args.version)
         validate_placement_assets(args.game_jar)
-    write_csv(args.out, (dict(version=args.version, **row) for row in candidates(args.seed, args.radius)), CANDIDATE_FIELDS)
+    write_csv(args.out, (dict(version=args.version, **row) for row in candidates(
+        args.seed, args.radius, center_x=getattr(args, 'center_x', 0),
+        center_z=getattr(args, 'center_z', 0))), CANDIDATE_FIELDS)
 
 
 def run_verify(args):
@@ -458,15 +485,41 @@ def run_estimate(args):
     subprocess.run(cmd, check=True)
 
 
+def validate_report_paths(*, out: Path | None, audit: Path | None = None,
+                          checkpoint: Path | None = None,
+                          summary: Path | None = None) -> None:
+    """Reject output collisions before touching a world or external server."""
+    seen = {}
+    for name, path in (('out', out), ('audit', audit), ('checkpoint', checkpoint), ('summary', summary)):
+        if path is None:
+            continue
+        normalized = Path(path).expanduser().resolve()
+        if normalized in seen:
+            raise ValueError(f'{name} path collides with {seen[normalized]}: {normalized}')
+        seen[normalized] = name
+
+
 def run_search_live(args):
     """One-command candidate search -> vanilla generation -> confirmed low-Y only."""
     from live import run_live
+    validate_report_paths(out=args.out, audit=getattr(args, 'audit', None),
+                          checkpoint=getattr(args, 'checkpoint', None),
+                          summary=getattr(args, 'summary', None))
     _data, seed = confirmed_world(args.world, getattr(args, 'version', 'auto'))
     world_ver, _ = detect_world_version(_data)
+    center_x = getattr(args, 'center_x', 0)
+    center_z = getattr(args, 'center_z', 0)
+    if args.priority == 'terrain' and (center_x != 0 or center_z != 0):
+        raise ValueError('Native experimental terrain ranking only supports center (0, 0); choose near-origin')
     if args.priority == 'terrain' and world_ver != '1.21.8':
         raise ValueError('Terrain priority is not validated for this version; choose near-origin')
     if not 1 <= args.limit <= 256:
         raise ValueError('--limit must be between 1 and 256 for live generation')
+    offset = getattr(args, 'offset', 0)
+    if not 0 <= offset <= 100_000:
+        raise ValueError('--offset must be in 0..100000')
+    if args.priority == 'terrain' and offset:
+        raise ValueError('Experimental terrain priority cannot use --offset; choose near-origin')
     with tempfile.TemporaryDirectory(prefix='lowyoutpost-') as td:
         candidate_path = Path(td) / 'candidates.csv'
         if args.priority == 'terrain':
@@ -505,31 +558,62 @@ def run_search_live(args):
                         'classification': 'placement_candidate'})
             write_csv(candidate_path, verified_rows, CANDIDATE_FIELDS)
         else:
-            closest = heapq.nsmallest(args.limit, candidates(seed, args.radius),
-                                     key=lambda r: (r['x'] ** 2 + r['z'] ** 2,
-                                                    r['chunk_x'], r['chunk_z']))
+            closest = heapq.nsmallest(offset + args.limit, candidates(seed, args.radius,
+                                center_x=center_x, center_z=center_z),
+                                     key=lambda r: ((r['x'] - center_x) ** 2 + (r['z'] - center_z) ** 2,
+                                                    r['chunk_x'], r['chunk_z']))[offset:]
             write_csv(candidate_path, (dict(version=world_ver, **row) for row in closest), CANDIDATE_FIELDS)
         live_args = SimpleNamespace(**vars(args))
         live_args.candidates = candidate_path
         live_args.out = args.audit
-        # CLI commands define -37 explicitly. Programmatic callers that predate
-        # this option retain their previous unfiltered behavior.
         live_args.stop_center_y_below = getattr(args, 'center_y_below', None)
+        live_args.stop_max_y = getattr(args, 'max_y', None)
         checked = run_live(live_args)
     # Guarantee that the public "hits" file contains no estimates or absent starts.
+    from search_conditions import accepted_tower, summarize_search
     center_limit = getattr(args, 'center_y_below', None)
-    confirmed = [dict(r, version=world_ver) for r in checked if r['status'] == 'verified_tower'
-                 and (center_limit is None or
-                      (r['structure_center_y'] != '' and
-                       float(r['structure_center_y']) < center_limit))
-                 and (args.max_y is None or int(r['base_plate_y']) <= args.max_y)]
-    confirmed.sort(key=lambda r: (r['distance_sq'], int(r['chunk_x']), int(r['chunk_z'])))
+    max_y = getattr(args, 'max_y', None)
+    confirmed = [dict(r, version=world_ver) for r in checked
+                 if accepted_tower(r, center_below=center_limit, max_y=max_y)]
+    sort_by = getattr(args, 'sort_by', 'distance')
+    # Preserve the historical distance_sq (distance from world origin) while
+    # exposing the actual distance to the user-selected center separately.
+    for row in confirmed:
+        row['search_distance_sq'] = (int(row['x'])-center_x)**2 + (int(row['z'])-center_z)**2
+    if sort_by == 'base-y':
+        confirmed.sort(key=lambda r: (int(r['base_plate_y']), r['search_distance_sq'], int(r['chunk_x'])))
+    elif sort_by == 'tower-y':
+        confirmed.sort(key=lambda r: (int(r['watchtower_min_y']), r['search_distance_sq'], int(r['chunk_x'])))
+    elif sort_by == 'distance':
+        confirmed.sort(key=lambda r: (r['search_distance_sq'], int(r['chunk_x']), int(r['chunk_z'])))
+    else:
+        raise ValueError('Invalid verified-result sort order')
     write_csv(args.out, confirmed, FIELDS)
-    print(f'vanilla-verified towers: {len(confirmed)} / {len(checked)} generated candidates'
-          + (f' (structure_center_y < {getattr(args, "center_y_below", None)})'
-             if getattr(args, 'center_y_below', None) is not None else '')
-          + (f' (base_plate_y <= {args.max_y})' if args.max_y is not None else ''),
-          file=sys.stderr)
+    if args.priority == 'near-origin':
+        total_candidates = sum(1 for _ in candidates(seed, args.radius,
+                                  center_x=center_x, center_z=center_z))
+    else:
+        total_candidates = max(len(checked), args.limit)
+    report = summarize_search(checked, center_below=center_limit, max_y=max_y,
+                              total_candidates=total_candidates, priority=args.priority)
+    if offset:
+        # A later page has no proof about skipped, nearer candidates, even if
+        # all entries in this page are confirmed absent or contain towers.
+        report['nearest_status'] = 'not_proven'
+        report['lowest_status'] = 'not_proven'
+    report.update(offset=offset, version=world_ver, seed=seed, radius=args.radius, center_x=center_x,
+                  center_z=center_z, sort_by=sort_by, center_y_below=center_limit,
+                  max_base_plate_y=max_y, evidence='saved_vanilla_anvil_nbt',
+                  warning='A lowest-Y certificate is only valid after all candidates in the '
+                          'search square have conclusive saved-world evidence; never for the entire world.')
+    if getattr(args, 'summary', None):
+        from geometry_audit import write_json_atomic
+        write_json_atomic(args.summary, report)
+    print(f'vanilla-verified towers: {len(confirmed)} / {len(checked)} generated candidates; '
+          f'nearest_status={report["nearest_status"]}; '
+          f'unresolved_before_first_hit={report["unresolved_before_first_hit"]}; '
+          f'unchecked={report["unchecked"]}; '
+          'only claims within the requested radius.', file=sys.stderr)
 
 
 
@@ -580,7 +664,9 @@ def main(argv=None) -> int:
     a.add_argument('--version', choices=sorted(SUPPORTED), default='1.21.8')
     a.add_argument('--seed', type=signed_seed, required=True)
     a.add_argument('--game-jar', type=Path, help='驗證對應遊戲資源 JAR 的結構放置參數與內建算法相符')
-    a.add_argument('--radius', type=int, default=8192, help='以世界原點為中心，方塊 X/Z 半徑')
+    a.add_argument('--radius', type=int, default=8192, help='以指定中心為準的正方形半徑（方塊）')
+    a.add_argument('--center-x', type=int, default=0, help='搜尋中心方塊 X，預設世界原點')
+    a.add_argument('--center-z', type=int, default=0, help='搜尋中心方塊 Z，預設世界原點')
     a.add_argument('--out', type=Path)
     a.set_defaults(run=run_candidates)
     a = commands.add_parser('verify', help='對指定候選逐一讀取已完成生成的原版存檔')
@@ -622,6 +708,12 @@ def main(argv=None) -> int:
     a.add_argument('--world-surface-wg', type=int, required=True)
     a.add_argument('--out', type=Path, help='JSON 結果（可省略，改輸出標準輸出）')
     a.set_defaults(run=run_tower_project)
+    from full_map import add_command as add_full_map_command
+    add_full_map_command(commands)
+    from seed_geometry import add_command as add_seed_geometry_command
+    add_seed_geometry_command(commands)
+    from server_check import add_command as add_server_check_command
+    add_server_check_command(commands)
     from asset_audit import add_command as add_assets_audit_command
     add_assets_audit_command(commands)
     from geometry_audit import add_command as add_geometry_audit_command
@@ -644,20 +736,27 @@ def main(argv=None) -> int:
     a.add_argument('--version', choices=['auto', *sorted(SUPPORTED)], default='auto')
     a.add_argument('--world', type=Path, required=True)
     a.add_argument('--radius', type=int, default=8192)
+    a.add_argument('--center-x', type=int, default=0)
+    a.add_argument('--center-z', type=int, default=0)
     a.add_argument('--limit', type=int, default=50)
+    a.add_argument('--offset', type=int, default=0, help='略過距搜尋中心較近的前 N 個候選，分批掃描時使用')
     a.add_argument('--timeout', type=int, default=180)
     a.add_argument('--host', default='127.0.0.1')
     a.add_argument('--port', type=int, default=25575)
     a.add_argument('--password-env', default='MINECRAFT_RCON_PASSWORD')
     a.add_argument('--allow-remote', action='store_true')
-    a.add_argument('--max-y', type=int, help='僅輸出經驗證 base_plate_y 小於等於此值的塔')
-    a.add_argument('--center-y-below', type=float, default=-37,
-                   help='只接受完整結構中心 Y 低於此值；找到最近符合者後停止')
+    a.add_argument('--max-y', type=int, help='僅接受 base_plate_y 小於等於此值的塔')
+    a.add_argument('--center-y-below', type=finite_y, default=-37,
+                   help='只接受完整結構中心 Y 低於此值；找到最近合格者後停止')
     a.add_argument('--priority', choices=['near-origin', 'terrain'], default='near-origin',
                    help='優先驗證最近候選，或使用未驗證的 C 地表高度排序')
     a.add_argument('--core-archive', type=Path, help='--priority terrain 所需地形核心原始碼壓縮檔')
     a.add_argument('--game-jar', type=Path, help='所選版本的遊戲資源 JAR，供試驗性地形排序投影起始基板')
     a.add_argument('--audit', type=Path, help='將所有已檢查候選的結果保留為稽核記錄')
+    a.add_argument('--checkpoint', type=Path, help='每完成一筆即保存進度 CSV；中斷不會刪除')
+    a.add_argument('--summary', type=Path, help='輸出樣本覆蓋與有限區域最低高度證據 JSON')
+    a.add_argument('--sort-by', choices=['distance', 'base-y', 'tower-y'], default='distance',
+                   help='只排序已驗證結果；不改變選擇待生成候選的順序')
     a.add_argument('--out', type=Path, required=True)
     a.set_defaults(run=run_search_live)
     args = parser.parse_args(argv)

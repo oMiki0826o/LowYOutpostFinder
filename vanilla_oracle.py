@@ -190,6 +190,10 @@ def run_vanilla(args) -> None:
     """
     if not args.eula_accepted:
         raise ValueError('Minecraft EULA acceptance is required (explicit --eula-accepted)')
+    from finder import validate_report_paths
+    validate_report_paths(out=args.out, audit=getattr(args, 'audit', None),
+                          checkpoint=getattr(args, 'checkpoint', None),
+                          summary=getattr(args, 'summary', None))
     check_version(args.version)
     if not 0 <= args.radius <= 30_000_000 or not 1 <= args.limit <= 256:
         raise ValueError('radius must be 0..30000000 and limit must be 1..256')
@@ -206,7 +210,9 @@ def run_vanilla(args) -> None:
     verify_bundle(jar, args.version)
     from finder import candidates, run_search_live
     # Validate search size before any world generation or output modification.
-    if next(candidates(args.seed, args.radius), None) is None:
+    if next(candidates(args.seed, args.radius,
+                       center_x=getattr(args, 'center_x', 0),
+                       center_z=getattr(args, 'center_z', 0)), None) is None:
         raise ValueError('No placement candidates within this radius; expand --radius')
     if args.out is None:
         raise ValueError('A .csv output path is required')
@@ -275,9 +281,10 @@ def add_vanilla_command(commands) -> None:
     parser.add_argument('--version', choices=sorted(SUPPORTED), required=True)
     parser.add_argument('--seed', type=signed_seed, required=True)
     parser.add_argument('--radius', type=int, default=8192)
+    parser.add_argument('--center-x', type=int, default=0)
+    parser.add_argument('--center-z', type=int, default=0)
     parser.add_argument('--limit', type=int, default=50)
-    parser.add_argument('--center-y-below', type=float, default=-37,
-                        help='找到最近的已驗證前哨站結構中心低於此 Y 後停止')
+    parser.add_argument('--offset', type=int, default=0, help='略過前 N 個距中心較近的候選（分批取樣）')
     parser.add_argument('--timeout', type=int, default=180)
     parser.add_argument('--startup-timeout', type=int, default=300)
     parser.add_argument('--memory', type=int, default=2048, help='最大 Java heap MiB')
@@ -285,7 +292,13 @@ def add_vanilla_command(commands) -> None:
     parser.add_argument('--java', default='java', help='已安裝的 Java 執行檔')
     parser.add_argument('--eula-accepted', action='store_true', help='必須自行閱讀並明確同意 Minecraft EULA')
     parser.add_argument('--max-y', type=int)
+    from finder import finite_y
+    parser.add_argument('--center-y-below', type=finite_y, default=-37,
+                        help='要求完整結構中心 Y 嚴格低於此值')
     parser.add_argument('--audit', type=Path, help='保留所有候選的檢查紀錄（含未生成／無結構）')
+    parser.add_argument('--checkpoint', type=Path, help='實測每筆進度 CSV；暫存世界仍會正常清理')
+    parser.add_argument('--summary', type=Path, help='實測覆蓋／最低 Y 完整性報告 JSON')
+    parser.add_argument('--sort-by', choices=['distance', 'base-y', 'tower-y'], default='distance')
     parser.add_argument('--priority', choices=['near-origin', 'terrain'], default='near-origin',
                         help='種子原版驗證優先順序：最近候選／1.21.8 試驗性低地形排序（可能漏掉低 Y）')
     parser.add_argument('--core-archive', type=Path, help='terrain 排序需提供的 LowYSwampHut 2.0.1 原始碼')

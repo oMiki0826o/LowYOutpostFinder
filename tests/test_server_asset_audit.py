@@ -5,6 +5,8 @@ from pathlib import Path
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 import zipfile
 
 from test_bundled_assets import bundle
@@ -67,9 +69,15 @@ class ServerAssetAuditTests(unittest.TestCase):
 
     def test_java_runtime_requirement_detected_before_server_launch(self):
         from vanilla_oracle import ensure_compatible_java
-        with self.assertRaisesRegex(ValueError, 'Java 25'):
-            ensure_compatible_java('java', {'java_version':25})
-        self.assertEqual(ensure_compatible_java('java', {'java_version':21}), 21)
+        with patch('vanilla_oracle.subprocess.run', return_value=
+                   SimpleNamespace(returncode=0, stdout='', stderr='openjdk version \"21.0.5\"')):
+            with self.assertRaisesRegex(ValueError, 'Java 25'):
+                ensure_compatible_java('java', {'java_version':25})
+            self.assertEqual(ensure_compatible_java('java', {'java_version':21}), 21)
+        with patch('vanilla_oracle.subprocess.run', return_value=
+                   SimpleNamespace(returncode=0, stdout='', stderr='openjdk version \"17.0.9\"')):
+            with self.assertRaisesRegex(ValueError, 'Java 21'):
+                ensure_compatible_java('java', {'java_version':21})
 
 if __name__ == '__main__':
     unittest.main()
