@@ -29,7 +29,7 @@ jobs:
       - name: Python compile and tests
         run: |
           python -m compileall -q .
-          python -m unittest discover -s tests -v
+          python scripts/run_headless_tests.py
       - name: GUI smoke tests on Linux
         if: runner.os == 'Linux'
         run: |
@@ -38,3 +38,6 @@ jobs:
           xvfb-run -a python -m unittest discover -s tests -p test_gui_lifecycle.py -v
           xvfb-run -a python -m unittest discover -s tests -p test_gui_english.py -v
           xvfb-run -a python -m unittest discover -s tests -p test_explorer_gui.py -v
+          xvfb-run -a python -m unittest discover -s tests -p test_full_map_gui_tk.py -v
+          xvfb-run -a python -m unittest discover -s tests -p test_main_gui_close.py -v
+          xvfb-run -a python -m unittest discover -s tests -p test_v2_gui_progress.py -v

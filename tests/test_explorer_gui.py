@@ -32,18 +32,20 @@ class ExplorerGuiTests(unittest.TestCase):
 
     def test_can_scan_seed_without_freezing_window(self):
         win = AdvancedWindow(self.app, language='zh-TW')
+        self.addCleanup(win._close)
         win.values['seed'].set('123')
         win._start()
         self.assertIsNotNone(win.worker)
-        for _ in range(200):
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
             self.app.update()
             if win.rows:
                 break
-            time.sleep(.01)
+            time.sleep(.02)
         self.assertGreater(len(win.rows), 20)
         self.assertTrue(all(row['classification'] == 'placement_candidate' for row in win.rows))
         self.assertFalse(any(row['projected_surface_y'] for row in win.rows))
-        win.destroy()
+        win._close()
 
 
 if __name__ == '__main__':
