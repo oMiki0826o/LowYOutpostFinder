@@ -358,7 +358,8 @@ def scan(cfg: ScanConfig, out: Path, *, resume: bool = False,
         _atomic_json(state_path, state)
 
     if binary is None:
-        binary = Path(__file__).resolve().parent / 'bin' / ('region_scan.exe' if os.name == 'nt' else 'region_scan')
+        from .paths import native_binary
+        binary = native_binary('region_scan')
     engine = 'native' if cfg.engine == 'native' or (cfg.engine == 'auto' and binary.is_file()) else 'python'
     if engine == 'native' and not binary.is_file():
         raise ValueError('Native scanner not compiled; run: python3 scripts/build_region_scan.py')

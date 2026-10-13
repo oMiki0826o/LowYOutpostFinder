@@ -8,7 +8,6 @@ from __future__ import annotations
 import csv
 from datetime import datetime
 import os
-from pathlib import Path
 import queue
 import re
 import shutil
@@ -21,10 +20,10 @@ from tkinter import filedialog, messagebox, ttk
 from .gui_model import SearchRequest, build_arguments
 from .explorer_gui import AdvancedWindow
 from .i18n import CATALOGS, tr
+from .paths import PROJECT_ROOT, cli_command
 from .versions import VERSIONS
 
-ROOT = Path(__file__).resolve().parents[1]
-PROJECT_VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
+PROJECT_VERSION = (PROJECT_ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 MODES = [(key, 'mode_' + key) for key in
          ('candidates', 'full-map', 'seed-geometry', 'estimate', 'world', 'verify', 'search-live', 'seed-vanilla')]
 
@@ -435,8 +434,8 @@ class App(tk.Tk):
                 return
             env = {**os.environ, **secrets}
             flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-            process = subprocess.Popen([sys.executable, str(ROOT / 'finder.py'), *args],
-                         cwd=ROOT, env=env, stdout=subprocess.PIPE,
+            process = subprocess.Popen(cli_command(*args),
+                         cwd=PROJECT_ROOT, env=env, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, text=True, encoding='utf-8',
                          errors='replace', bufsize=1, creationflags=flags)
             self.process = process

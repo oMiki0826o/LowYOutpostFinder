@@ -463,13 +463,13 @@ def run_estimate(args):
     if getattr(args, 'game_jar', None):
         from .game_archive import require_matching_game_version
         require_matching_game_version(args.game_jar, args.version)
-    root = Path(__file__).resolve().parent
-    binary = root / 'bin' / 'lowyoutpost'
+    from .paths import PROJECT_ROOT, native_binary
+    binary = native_binary('lowyoutpost')
     if not binary.is_file():
         if not args.core_archive:
             raise ValueError('Build first: sh build.sh /path/LowYSwampHut-2.0.1.tar.gz ; '
                              'or specify --core-archive to compile the optional C approximation')
-        subprocess.run(['sh', str(root / 'build.sh'), str(args.core_archive)], check=True)
+        subprocess.run(['sh', str(PROJECT_ROOT / 'build.sh'), str(args.core_archive)], check=True)
     cmd = [str(binary), '--seed', str(args.seed), '--radius', str(args.radius),
            '--max-y', str(args.max_y), '--top', str(args.top)]
     if getattr(args, 'game_jar', None):
@@ -526,11 +526,12 @@ def run_search_live(args):
             estimated_path = Path(td) / 'terrain-approximation.csv'
             if not 1 <= args.limit <= 100000:
                 raise ValueError('Terrain prediction --limit must be in 1..100000')
-            native = Path(__file__).resolve().parent / 'bin' / 'lowyoutpost'
+            from .paths import PROJECT_ROOT, native_binary
+            native = native_binary('lowyoutpost')
             if not native.is_file():
                 if not args.core_archive:
                     raise ValueError('Native terrain priority needs --core-archive or a built C scanner')
-                subprocess.run(['sh', str(Path(__file__).resolve().parent / 'build.sh'),
+                subprocess.run(['sh', str(PROJECT_ROOT / 'build.sh'),
                                 str(args.core_archive)], check=True)
             # Disable unvalidated biome gating; do not use an estimated max-Y cutoff.
             cmd = [str(native), '--seed', str(seed), '--radius', str(args.radius),

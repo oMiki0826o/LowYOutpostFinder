@@ -10,6 +10,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+from .paths import native_binary
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="多種子低 Y 前哨站候選排序")
@@ -18,7 +20,7 @@ def main() -> int:
     parser.add_argument("--max-y", type=int, default=64)
     parser.add_argument("--top", type=int, default=25)
     parser.add_argument("--output", type=Path, default=Path("results.csv"))
-    parser.add_argument("--binary", type=Path, default=Path(__file__).resolve().parent / "bin" / "lowyoutpost")
+    parser.add_argument("--binary", type=Path, default=native_binary("lowyoutpost"))
     args = parser.parse_args()
     if args.top <= 0:
         parser.error("--top 必須大於零")

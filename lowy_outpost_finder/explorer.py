@@ -19,6 +19,7 @@ import time
 from typing import Callable, Iterable
 
 from .cli import OUTPOST, pass_legacy_frequency, pass_village_exclusion, region_position, signed_seed, write_csv, is_candidate_start
+from .paths import native_binary
 from .versions import check_version
 
 MAX_REGIONS = 5_000_000
@@ -125,7 +126,7 @@ class Explorer:
         self.max_y = max_y
         self.top_per_seed = top_per_seed
         self.threads = threads
-        self.binary = binary or Path(__file__).resolve().parent / 'bin' / 'lowyoutpost'
+        self.binary = binary or native_binary('lowyoutpost')
 
     def _one(self, seed: int, cancel: threading.Event, pause: threading.Event, region_progress=None) -> list[dict]:
         if cancel.is_set():
