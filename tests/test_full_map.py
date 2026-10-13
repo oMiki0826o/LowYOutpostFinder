@@ -92,7 +92,7 @@ class FullMapTests(unittest.TestCase):
             binpath = Path(folder) / 'region_scan'
             compiler = shutil.which('cc') or shutil.which('clang') or shutil.which('gcc')
             subprocess.run([compiler, '-O2', '-std=c11', '-Wall', '-Wextra',
-                            str(ROOT / 'src' / 'region_scan.c'), '-o', str(binpath)], check=True,
+                            str(ROOT / 'native' / 'src' / 'region_scan.c'), '-o', str(binpath)], check=True,
                            capture_output=True, text=True)
             grid = RegionGrid(-3000, 5000, -4000, 4000)
             for seed in (0, 123, -9, 9223372036854775807, -9223372036854775808):

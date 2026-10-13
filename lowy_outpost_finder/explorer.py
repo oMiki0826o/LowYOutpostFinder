@@ -143,7 +143,7 @@ class Explorer:
                                      'increase the per-seed result limit or reduce the area')
             return rows
         if not self.binary.is_file():
-            raise ValueError('Native terrain sampler is missing. Build it first using build.sh '
+            raise ValueError('Native terrain sampler is missing. Build it with scripts/build_native.py terrain '
                              'and your supplied LowYSwampHut 2.0.1 source archive')
         cmd = [str(self.binary), '--seed', str(seed), '--radius', str(self.radius),
                '--max-y', str(self.max_y), '--top', str(self.top_per_seed), '--skip-biome']

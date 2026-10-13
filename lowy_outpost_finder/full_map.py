@@ -362,7 +362,7 @@ def scan(cfg: ScanConfig, out: Path, *, resume: bool = False,
         binary = native_binary('region_scan')
     engine = 'native' if cfg.engine == 'native' or (cfg.engine == 'auto' and binary.is_file()) else 'python'
     if engine == 'native' and not binary.is_file():
-        raise ValueError('Native scanner not compiled; run: python3 scripts/build_region_scan.py')
+        raise ValueError('Native scanner not compiled; run: python3 scripts/build_native.py region')
     if grid.total > 5_000_000 and engine == 'python' and state['processed_regions'] == 0:
         print('WARNING: Python fallback for world-size scans is very slow. Build the optional native scanner.', file=sys.stderr)
 

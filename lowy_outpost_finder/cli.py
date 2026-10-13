@@ -467,9 +467,10 @@ def run_estimate(args):
     binary = native_binary('lowyoutpost')
     if not binary.is_file():
         if not args.core_archive:
-            raise ValueError('Build first: sh build.sh /path/LowYSwampHut-2.0.1.tar.gz ; '
+            raise ValueError('Build first: python scripts/build_native.py terrain /path/LowYSwampHut-2.0.1.tar.gz ; '
                              'or specify --core-archive to compile the optional C approximation')
-        subprocess.run(['sh', str(PROJECT_ROOT / 'build.sh'), str(args.core_archive)], check=True)
+        subprocess.run([sys.executable, str(PROJECT_ROOT / 'scripts' / 'build_native.py'),
+                        'terrain', str(args.core_archive)], check=True)
     cmd = [str(binary), '--seed', str(args.seed), '--radius', str(args.radius),
            '--max-y', str(args.max_y), '--top', str(args.top)]
     if getattr(args, 'game_jar', None):
@@ -531,8 +532,8 @@ def run_search_live(args):
             if not native.is_file():
                 if not args.core_archive:
                     raise ValueError('Native terrain priority needs --core-archive or a built C scanner')
-                subprocess.run(['sh', str(PROJECT_ROOT / 'build.sh'),
-                                str(args.core_archive)], check=True)
+                subprocess.run([sys.executable, str(PROJECT_ROOT / 'scripts' / 'build_native.py'),
+                                'terrain', str(args.core_archive)], check=True)
             # Disable unvalidated biome gating; do not use an estimated max-Y cutoff.
             cmd = [str(native), '--seed', str(seed), '--radius', str(args.radius),
                    '--max-y', '320', '--skip-biome', '--top', str(args.limit),
