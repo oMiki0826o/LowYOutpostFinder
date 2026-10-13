@@ -7,7 +7,7 @@
 - `python3 -m compileall -q -x '(\.build|__pycache__)' .`：成功。
 - `python3 -m unittest discover -s tests -v`：179 項，**0 失敗、12 略過**（無 GUI 顯示器）。
 - `xvfb-run -a python3 -m unittest discover -s tests -v`：182 項，**0 失敗、0 略過**，其中包含繁體中文／英文 GUI 及 2.0 新增回歸測試。
-- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：CMake 與 C 搜尋器編譯成功；外部原始碼不包含於發布 ZIP。
+- `python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz`：CMake 與 C 搜尋器編譯成功；外部原始碼不包含於發布 ZIP。
 - `python3 tests/check_placement.py bin/lowyoutpost`：五組種子（0、123、-1、Long.MIN、Long.MAX）Java 隨機數候選位置對照通過。
 
 ## 用實際提供的原版 Minecraft JAR 核對
@@ -15,10 +15,10 @@
 提供的 1.21.8 `server (1).jar`（宣告 DataVersion 4440，Java 21）使用以下命令完成**不啟動伺服器的資源驗證**：
 
 ```sh
-python3 finder.py server-check --version 1.21.8 --server-jar '/mnt/data/server (1).jar' --java java --out /mnt/data/lowy_build/v2_real_preflight.json
-python3 finder.py assets-audit --version 1.21.8 --server-jar '/mnt/data/server (1).jar' --out /mnt/data/lowy_build/v2_assets_1218.json
-python3 finder.py seed-geometry --version 1.21.8 --seed 123 --radius 8192 --game-jar '/mnt/data/server (1).jar' --out /mnt/data/lowy_build/v2_seed_geometry_real.csv
-python3 finder.py estimate --version 1.21.8 --seed 123 --radius 2048 --max-y 64 --top 3 --game-jar '/mnt/data/server (1).jar' --out /mnt/data/lowy_build/v2_approx.csv
+python3 -m lowy_outpost_finder server-check --version 1.21.8 --server-jar '/mnt/data/server (1).jar' --java java --out /mnt/data/lowy_build/v2_real_preflight.json
+python3 -m lowy_outpost_finder assets-audit --version 1.21.8 --server-jar '/mnt/data/server (1).jar' --out /mnt/data/lowy_build/v2_assets_1218.json
+python3 -m lowy_outpost_finder seed-geometry --version 1.21.8 --seed 123 --radius 8192 --game-jar '/mnt/data/server (1).jar' --out /mnt/data/lowy_build/v2_seed_geometry_real.csv
+python3 -m lowy_outpost_finder estimate --version 1.21.8 --seed 123 --radius 2048 --max-y 64 --top 3 --game-jar '/mnt/data/server (1).jar' --out /mnt/data/lowy_build/v2_approx.csv
 ```
 
 - 預檢：JAR 宣告 Minecraft 1.21.8、要求 Java 21；目前 Java 21；放置參數符合搜尋器內建公式。**此結果不等於 JAR 來源簽章驗證**。

@@ -7,7 +7,7 @@ LowYOutpostFinder 2.0.1 的全圖模式**不啟動 Minecraft、不生成地圖�
 在專案根目錄執行：
 
 ```sh
-python3 finder.py full-map --seed 123 --version 1.21.8 \
+python3 -m lowy_outpost_finder full-map --seed 123 --version 1.21.8 \
   --strategy nearest --center-x 0 --center-z 0 --top 100 \
   --out results/nearest.csv
 ```
@@ -29,12 +29,12 @@ python3 finder.py full-map --seed 123 --version 1.21.8 \
 
 ```sh
 # 可選。macOS / Linux 需要 Xcode CLT 或 cc/clang；Windows 需要 MinGW gcc/clang。
-python3 scripts/build_region_scan.py
+python3 scripts/build_native.py region
 
 # 舊有的地形近似模式也可選用 LowYSwampHut-main.zip 編譯：
-# sh build.sh /path/to/LowYSwampHut-main.zip
+# python3 scripts/build_native.py terrain /path/to/LowYSwampHut-main.zip
 
-python3 finder.py full-map --seed 123 --version 1.21.8 \
+python3 -m lowy_outpost_finder full-map --seed 123 --version 1.21.8 \
   --strategy exhaustive --engine auto --top 100 \
   --batch-regions 500000 --cpu-rest-ms 150 \
   --out results/all-cells.csv
@@ -52,7 +52,7 @@ python3 finder.py full-map --seed 123 --version 1.21.8 \
 **只有 `status=complete` 才代表已走訪所選範圍內的全部放置網格**。中斷前保存的狀態會是 `incomplete`。想繼續，只需要相同參數與路徑：
 
 ```sh
-python3 finder.py full-map --seed 123 --version 1.21.8 \
+python3 -m lowy_outpost_finder full-map --seed 123 --version 1.21.8 \
   --strategy exhaustive --engine auto --resume \
   --out results/all-cells.csv
 ```
@@ -62,7 +62,7 @@ python3 finder.py full-map --seed 123 --version 1.21.8 \
 ## 只搜尋世界的一塊區域
 
 ```sh
-python3 finder.py full-map --version 1.21.8 --seed -123456 \
+python3 -m lowy_outpost_finder full-map --version 1.21.8 --seed -123456 \
   --x-min -100000 --x-max -50000 --z-min 20000 --z-max 90000 \
   --center-x -75000 --center-z 55000 --top 50 \
   --strategy nearest --out results/rectangle.csv
@@ -72,7 +72,7 @@ python3 finder.py full-map --version 1.21.8 --seed -123456 \
 
 ## GUI 操作
 
-1. 在專案目錄執行 `python3 start_gui.py`，選擇「全圖候選（免生成）」。
+1. 在專案目錄執行 `python3 LowYOutpostFinder.py`，選擇「全圖候選（免生成）」。
 2. 選 Minecraft 版本、種子，以及可選的中心 X/Z；「只保留最近 N 筆候選」推薦先設 100。
 3. 預設 `nearest`：不必設 Java、JAR、Y、記憶體與續跑。按開始後可預覽 CSV。
 4. 如果需要盤點全部網格，切到 `exhaustive`；建議先執行可選 C 掃描器建置，並保留 `auto` 引擎。
@@ -93,9 +93,9 @@ python3 finder.py full-map --version 1.21.8 --seed -123456 \
 
 ## English quick reference
 
-- **Whole-world nearest placement, no chunks:** `python3 finder.py full-map --seed 123 --strategy nearest --top 100 --out nearest.csv`
-- **Every placement cell, resumable:** `python3 finder.py full-map --seed 123 --strategy exhaustive --out all.csv`
-- **Build optional native C11 accelerator:** `python3 scripts/build_region_scan.py`
+- **Whole-world nearest placement, no chunks:** `python3 -m lowy_outpost_finder full-map --seed 123 --strategy nearest --top 100 --out nearest.csv`
+- **Every placement cell, resumable:** `python3 -m lowy_outpost_finder full-map --seed 123 --strategy exhaustive --out all.csv`
+- **Build optional native C11 accelerator:** `python3 scripts/build_native.py region`
 - **Resume matching job:** add `--strategy exhaustive --resume` with the exact same path and query settings.
 - **CPU rest:** `--cpu-rest-ms 150` (exhaustive only).
 - **Proof boundary:** `proven_nearest_placement_only` proves nearest seed-derived placement candidates, not generated outposts or exact tower Y.

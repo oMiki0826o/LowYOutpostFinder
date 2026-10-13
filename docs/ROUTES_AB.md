@@ -9,7 +9,7 @@
 執行前可先檢查 JAR 與 Java 是否相容（此步驟**不啟動世界**）：
 
 ```sh
-python3 finder.py server-check --version 1.21.8 \
+python3 -m lowy_outpost_finder server-check --version 1.21.8 \
   --server-jar /path/to/server.jar --java java --out results/server-check.json
 ```
 
@@ -18,7 +18,7 @@ python3 finder.py server-check --version 1.21.8 \
 執行前須自行閱讀並接受 Minecraft EULA，並備妥 Java 21 與**可信任的 1.21.8** 原版 `server.jar`。請勿執行陌生人提供的可執行 JAR。
 
 ```sh
-python3 finder.py seed-vanilla \
+python3 -m lowy_outpost_finder seed-vanilla \
   --version 1.21.8 --seed 123 --server-jar /path/to/server.jar \
   --java java --eula-accepted --radius 8192 \
   --center-x 0 --center-z 0 --limit 20 --offset 0 \
@@ -35,7 +35,7 @@ python3 finder.py seed-vanilla \
 
 ```sh
 export MINECRAFT_RCON_PASSWORD='your-local-rcon-password'
-python3 finder.py search-live \
+python3 -m lowy_outpost_finder search-live \
   --world /path/to/offline-world-folder --radius 8192 \
   --center-x -1024 --center-z 2048 --limit 50 --offset 0 \
   --center-y-below -37 --sort-by tower-y \
@@ -54,7 +54,7 @@ python3 finder.py search-live \
 純種子預測已實作的範圍包括：**原版結構放置嘗試座標**、讀取同版 JAR 的前哨站模板尺寸、模擬原版 Jigsaw 起始旋轉，以及推導原版會呼叫 `WORLD_SURFACE_WG` 的 X/Z 取樣位置。這些都不需要真正生成區塊。
 
 ```sh
-python3 finder.py seed-geometry \
+python3 -m lowy_outpost_finder seed-geometry \
   --version 1.21.8 --seed 123 --radius 8192 \
   --center-x -1024 --center-z 2048 \
   --game-jar /path/to/server.jar --out results/geometry.csv

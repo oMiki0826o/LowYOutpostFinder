@@ -4,14 +4,22 @@
 
 ## 資料流程
 
-1. `finder.py` 依種子與已採用的 `RandomSpreadStructurePlacement`、`legacy_type_1` 頻率及村莊排除規則，計算前哨站結構 *嘗試* 座標。此階段不載入遊戲地形。
-2. `versions.py` 限定 UI 可選版號，並從 `level.dat` 的 `Version.Name`、`DataVersion` 取得世界版本；讀取已保存的區塊時另比對 DataVersion。
-3. `nbt.py` 唯讀解壓縮、解析 NBT 和 Anvil `region/*.mca`。`finder.WorldChunks` 避免同時開啟很多 region 檔；結構片段的 Y 取自儲存於 FULL 區塊的包圍盒。
+1. `LowYOutpostFinder.py` 是根目錄唯一 GUI 入口；`python -m lowy_outpost_finder` 提供進階 CLI。兩者都只委派給 `lowy_outpost_finder/` 套件。
+2. `lowy_outpost_finder/cli.py` 依種子與已採用的 `RandomSpreadStructurePlacement`、`legacy_type_1` 頻率及村莊排除規則，計算前哨站結構 *嘗試* 座標。此階段不載入遊戲地形。
+3. `versions.py` 限定 UI 可選版號，並從 `level.dat` 的 `Version.Name`、`DataVersion` 取得世界版本；讀取已保存的區塊時另比對 DataVersion。
+4. `nbt.py` 唯讀解壓縮、解析 NBT 和 Anvil `region/*.mca`。`cli.WorldChunks` 避免同時開啟很多 region 檔；結構片段的 Y 取自儲存於 FULL 區塊的包圍盒。
 4. `live.py` 在使用者明確要求下，以 RCON 在同種子伺服器上生成候選區塊，再執行 `save-all flush`，等區塊存至磁碟後核對。使用前必須備份，非本機 RCON 未加密。
 5. `i18n.py` 提供完整繁體中文／英文 GUI 訊息對照，語言切換不修改 CSV 欄位或既有表單值。`gui_model.py` 僅檢查表單和建立 CLI 參數；`gui.py` 以獨立 Python 子行程執行，視窗可取消並檢視 CSV。子行程成功後才顯示搜尋結果。
 
 6. `vanilla_oracle.py` 新增 `seed-vanilla`：啟動使用者提供的版本相符原版 JAR，短暫建立世界並用本機 RCON 執行 `run_search_live`；透過 `try/finally` 停止 Java 與清除世界。只保留 CSV。此路徑具有原版生成階段，並非免生成的精確地形計算。
-7. `src/outpost_scan.c` 透過另外編譯的 LowYSwampHut 核心提供僅限 1.21.8、無需世界存檔的近似地表推算；GUI 的 `estimate` 模式及 CLI 可呼叫它。CSV 明確使用 `estimated_only`，不得視為 `verified_tower`。
+7. `native/src/outpost_scan.c` 透過另外編譯的 LowYSwampHut 核心提供僅限 1.21.8、無需世界存檔的近似地表推算；GUI 的 `estimate` 模式及 CLI 可呼叫它。CSV 明確使用 `estimated_only`，不得視為 `verified_tower`。
+
+## 開發治理邊界
+
+- 公開架構、使用與驗證文件放在 `docs/`。
+- AI 協作規格、執行計畫與本機狀態只存於已忽略的 `data/`，不得進入 Git 或發布包。
+- 重構必須保留證據分類與 fail-closed 邊界；不得將候選或近似結果升級為原版已驗證結果。
+- CI 將 headless 測試與真實 Tk 測試分離；Tk 測試只在 Linux Xvfb 中以獨立程序執行。
 
 ## Jigsaw 結構的 Y 如何決定？
 

@@ -11,7 +11,7 @@ import unittest
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from package_release import package
+from package_release import package, write_manifest
 
 
 class ReleaseTests(unittest.TestCase):
@@ -25,7 +25,9 @@ class ReleaseTests(unittest.TestCase):
             package_dir = root / 'lowy_outpost_finder'
             package_dir.mkdir()
             (package_dir / 'cli.py').write_text('def main(): return 0\n')
-            for name in ('.git/config', '.build/temp.o', 'bin/scanner', 'data/secret.txt',
+            for name in ('.git/config', '.build/temp.o', '.superpowers/plan.md',
+                         '.agents/instructions.md', '.codex/state.json',
+                         'bin/scanner', 'data/secret.txt',
                          'results/hits.csv', 'world/region/r.0.0.mca', '__pycache__/hi.pyc',
                          '.env', 'server.properties'):
                 file = root / name
@@ -55,6 +57,19 @@ class ReleaseTests(unittest.TestCase):
                 digest = hashlib.sha256(b'hello\n').hexdigest()
                 self.assertIn(f'{digest}  hello.txt', manifest)
                 self.assertEqual(z.read('project/hello.txt'), b'hello\n')
+
+    def test_standalone_manifest_excludes_itself_and_private_state(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / 'hello.txt').write_text('hello\n')
+            (root / 'data').mkdir()
+            (root / 'data' / 'ai-plan.md').write_text('private\n')
+            output = root / 'SHA256SUMS.txt'
+            write_manifest(root, output)
+            manifest = output.read_text()
+            self.assertIn('hello.txt', manifest)
+            self.assertNotIn('SHA256SUMS.txt', manifest)
+            self.assertNotIn('ai-plan.md', manifest)
 
 
 if __name__ == '__main__':

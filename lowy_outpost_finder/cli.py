@@ -1,4 +1,4 @@
-"""File: finder.py
+"""Command-line workflows for LowY Outpost Finder.
 Modification: 2026-10-13 — version-locked placement scanning plus asset validation and vanilla geometry audit.
 
 No inferred candidate may be represented as a confirmed Minecraft structure.

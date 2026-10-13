@@ -8,7 +8,8 @@ import hashlib
 from pathlib import Path
 import zipfile
 
-OMIT_DIRS = frozenset({'.git', '.build', 'bin', 'data', 'results', 'world',
+OMIT_DIRS = frozenset({'.git', '.build', '.superpowers', '.agents', '.codex',
+                       'bin', 'data', 'results', 'world',
                        '__pycache__', '.venv', '.pytest_cache', '.idea', '.vscode',
                        'dist', 'node_modules'})
 OMIT_FILES = frozenset({'server.properties', 'eula.txt', 'level.dat',
@@ -80,16 +81,29 @@ def package(root: Path, output: Path) -> None:
         part.unlink(missing_ok=True)
 
 
+def write_manifest(root: Path, output: Path) -> None:
+    """Write deterministic SHA-256 hashes for releasable source files."""
+    root = root.resolve()
+    lines = [f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {rel.as_posix()}'
+             for path, rel in source_files(root)]
+    output.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description='Create a source-only LowYOutpostFinder release ZIP')
-    parser.add_argument('--output', type=Path, required=True)
+    destination = parser.add_mutually_exclusive_group(required=True)
+    destination.add_argument('--output', type=Path)
+    destination.add_argument('--manifest', type=Path)
     parser.add_argument('--source', type=Path, default=Path(__file__).resolve().parents[1])
     args = parser.parse_args()
     try:
-        package(args.source, args.output)
+        if args.manifest:
+            write_manifest(args.source, args.manifest)
+        else:
+            package(args.source, args.output)
     except (ValueError, OSError, zipfile.BadZipFile) as exc:
         parser.error(str(exc))
-    print(f'Created: {args.output.resolve()}')
+    print(f'Created: {(args.manifest or args.output).resolve()}')
     return 0
 
 

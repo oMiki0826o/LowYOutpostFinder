@@ -5,7 +5,7 @@
 - `python3 -m compileall -q -x '(\.build|__pycache__)' .`：通過。
 - `python3 -m unittest discover -s tests -v`：**190 項，0 失敗、12 略過**（無桌面顯示器及可選情境）。
 - `xvfb-run -a python3 -m unittest discover -s tests -p 'test_gui_*.py' -v`：**9 項通過**；另執行 `test_v2_gui_progress.py`：**1 項通過**。
-- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：C 核心編譯成功，**高度仍屬試驗性近似**。
+- `python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz`：C 核心編譯成功，**高度仍屬試驗性近似**。
 - `python3 tests/check_placement.py bin/lowyoutpost`：5 組邊界及一般 Java 種子全部 PASS（只驗證候選亂數）。
 - `server-check --version 1.21.8 --server-jar <使用者提供的 JAR> --java java`：已識別遊戲 1.21.8、Java 21、原版放置常數一致，明確標示 `vanilla_world_generated=false`、`exact_seed_only_height_ready=false`。
 - `seed-geometry` 與 `candidates` 使用同版真實資源 JAR、種子 123、中心 (-1024, 2048)、半徑 8192，均得到 **122 筆**，彼此候選座標相同；`seed-geometry` 具有 `rotation/sample_x/sample_z` 而**沒有高度欄位**。
@@ -23,11 +23,11 @@
 - `python3 -m compileall -q .`：通過。
 - `python3 -m unittest discover -s tests -q`：165 tests, 0 failures, 13 skipped（無顯示器／可選功能的條件性略過）。
 - `xvfb-run -a python3 -m unittest discover -s tests -v`：167 tests, 0 failures, 2 skipped（包含雙語 GUI）。
-- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：已使用上傳的第三方原始碼成功編譯原生 C 核心；發行 ZIP **不包含**第三方原始碼或編譯產物。
+- `python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz`：已使用上傳的第三方原始碼成功編譯原生 C 核心；發行 ZIP **不包含**第三方原始碼或編譯產物。
 - `python3 tests/check_placement.py bin/lowyoutpost`：5 組獨立 Java RNG 種子比較通過。
-- `python3 finder.py assets-audit --version 1.21.8 --server-jar <supplied-file>`：已成功讀取使用者提供的原版 1.21.8 JAR 資料（未啟動伺服器）。
-- `python3 finder.py candidates --version 1.21.8 --seed 123 --radius 8192`：輸出 118 筆候選。
-- `finder.py seed-vanilla ... --center-y-below nan`：預期拒絕 NaN，且未建立結果 CSV。
+- `python3 -m lowy_outpost_finder assets-audit --version 1.21.8 --server-jar <supplied-file>`：已成功讀取使用者提供的原版 1.21.8 JAR 資料（未啟動伺服器）。
+- `python3 -m lowy_outpost_finder candidates --version 1.21.8 --seed 123 --radius 8192`：輸出 118 筆候選。
+- `python3 -m lowy_outpost_finder seed-vanilla ... --center-y-below nan`：預期拒絕 NaN，且未建立結果 CSV。
 - 另外加入早停門檻一致性、較近候選未完成不得聲稱最近，以及 GUI 表單收合等回歸測試。
 
 **仍未驗證：** 真正的 Mojang 原版伺服器生成／存檔端到端對拍、Windows/macOS 新版 CI 實機執行與完整的 seed-only Noise/Biome/Jigsaw 引擎。Python/Tk 測試及資源 JAR 離線檢查**不等於**原版演算法完全精確。
@@ -39,10 +39,10 @@
 日期 / Date: 2026-10-13
 
 - `python3 -m unittest discover -s tests -q`：**157 cases, 0 failures, 10 skipped**；其中新增 13 項針對有限區域最低高度證明、幾何資料防誤判、世界修改中斷及待生成候選輸出。
-- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：本機 C 核心編譯 exit 0。此核心只提供近似高度，不是精確 1.21.8 世界生成。
+- `python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz`：本機 C 核心編譯 exit 0。此核心只提供近似高度，不是精確 1.21.8 世界生成。
 - `python3 tests/check_placement.py bin/lowyoutpost`：5 組 Java/原生 RNG 參考種子全數通過；證明放置座標，**不是**生態域或 Jigsaw 高度。
 - `xvfb-run -a python3 -m unittest discover -s tests -p 'test_gui_*.py' -q`：**8 cases, 0 failures**，原有繁體中文／英文 GUI 冒煙驗證。
-- `python3 finder.py assets-audit --version 1.21.8 --server-jar ...` 與 `jigsaw-contract`：使用上傳的 1.21.8 JAR 完成離線結構資源核對；**未執行** Java 伺服器生成世界。
+- `python3 -m lowy_outpost_finder assets-audit --version 1.21.8 --server-jar ...` 與 `jigsaw-contract`：使用上傳的 1.21.8 JAR 完成離線結構資源核對；**未執行** Java 伺服器生成世界。
 - `region-certificate` 的完整與不完整分支：單元測試使用人工原版格式區塊資料與受控假件；**沒有自然生成世界存檔的端到端核證資料。**
 
 **明確限制：** v2.13.0 實作的是由**既有且可信的原版世界存檔**回推的「有限指定半徑最低 Y 證明」。它無法從種子獨立計算 1.21～26.x 的精確 Noise、Biome、`WORLD_SURFACE_WG` 和完整 Jigsaw。先前要求的六項純種子精確生成目標**仍未完成**，絕不因本次測試成功而宣稱完成。
@@ -58,10 +58,10 @@
 - `python -m compileall -q -x '(\.build|__pycache__)' .`：通過 / passed。
 - `python -m unittest discover -s tests -v`：**144 tests, 0 failures, 10 skipped**。解壓後因未附加可選 C 執行檔，重跑為 **144 tests, 0 failures, 12 skipped**。
 - `xvfb-run -a python -m unittest discover -s tests -p 'test_gui_*.py' -v`：**8 passed**。
-- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：C 核心重新編譯成功；此核心的 Y 僅為近似值。
+- `python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz`：C 核心重新編譯成功；此核心的 Y 僅為近似值。
 - `python tests/check_placement.py bin/lowyoutpost`：**5/5 Java Random test seeds PASS**；只驗證放置候選公式。
-- `finder.py worldgen-contract`：使用上傳的原版 1.21.8 JAR 找到 16 個密度函數資源、34 個 Noise 參數資源；26.3 JAR 找到 21 個密度函數資源、26 個 Noise 參數資源。**完整資源相依，不等於執行正確的 Noise 運算**。
-- `finder.py jigsaw-contract`：兩份 JAR 各找到 4 個可達結構池、11 個模板與 13 個連接參照。**未實作原版 Jigsaw 隨機選擇／碰撞模擬**。
+- `python3 -m lowy_outpost_finder worldgen-contract`：使用上傳的原版 1.21.8 JAR 找到 16 個密度函數資源、34 個 Noise 參數資源；26.3 JAR 找到 21 個密度函數資源、26 個 Noise 參數資源。**完整資源相依，不等於執行正確的 Noise 運算**。
+- `python3 -m lowy_outpost_finder jigsaw-contract`：兩份 JAR 各找到 4 個可達結構池、11 個模板與 13 個連接參照。**未實作原版 Jigsaw 隨機選擇／碰撞模擬**。
 - `certify-samples`：人工測資驗證有限樣本核對、版本／雜湊不符拒絕、缺漏及不一致處理；尚無真實原版世界高度樣本。
 
 兩份 JAR 均未納入發布檔。上傳檔 SHA-256：
@@ -93,10 +93,10 @@
 - `python3 -m compileall -q -x '(\.build|__pycache__)' .`：exit 0 / passed.
 - `python3 -m unittest discover -s tests -v`：**129 tests, 0 failures, 10 skipped**.
 - `xvfb-run -a python3 -m unittest discover -s tests -p 'test_gui_*.py' -v`：**8 passed**（繁中／英文 GUI 冒煙測試）。
-- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：exit 0；以使用者提供的原始碼重新建置可選 C 高度推算核心。
+- `python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz`：exit 0；以使用者提供的原始碼重新建置可選 C 高度推算核心。
 - `python3 tests/check_placement.py bin/lowyoutpost`：**5 / 5 seeds PASS**，使用獨立 Java 亂數程式對照候選位置；並非真實結構生成驗證。
-- `python3 finder.py assets-audit --version 1.21.8 --server-jar '/mnt/data/server (1).jar' ...`：成功讀取使用者提供的 **1.21.8 / DataVersion 4440 / Java 21** JAR（內層完整世界生成資源）；核對 placement、村莊排除、16×30×16 基板、15×21×15 塔樓、塔樓 Y 相對位移 0，以及原版允許生成的 **12 個生態域標籤展開結果**。
-- `python3 finder.py assets-audit --version 26.3 --server-jar /mnt/data/server.jar ...`：成功讀取上一輪使用者提供的 **26.3 / DataVersion 5023 / Java 25** JAR；相同資源驗證通過。此處不把資源一致推廣為世界生成演算法一致。
+- `python3 -m lowy_outpost_finder assets-audit --version 1.21.8 --server-jar '/mnt/data/server (1).jar' ...`：成功讀取使用者提供的 **1.21.8 / DataVersion 4440 / Java 21** JAR（內層完整世界生成資源）；核對 placement、村莊排除、16×30×16 基板、15×21×15 塔樓、塔樓 Y 相對位移 0，以及原版允許生成的 **12 個生態域標籤展開結果**。
+- `python3 -m lowy_outpost_finder assets-audit --version 26.3 --server-jar /mnt/data/server.jar ...`：成功讀取上一輪使用者提供的 **26.3 / DataVersion 5023 / Java 25** JAR；相同資源驗證通過。此處不把資源一致推廣為世界生成演算法一致。
 - `ensure_compatible_java` 預檢：**1.21.8 Java 21 = 可啟動版本**；**26.3 Java 21 = 不相容（需 Java 25）**。
 - `test_noise_witness.py`（5 cases）和 `test_biome_assets.py`（4 cases）：先觀察缺少功能、循環標籤及無效高度的失敗，再實作通過。新功能的驗證資料來自人工 NBT 測試，**不是 Mojang 真實世界存檔**。
 
@@ -131,7 +131,7 @@
 
 - `python -m compileall -q -x '(\.build|__pycache__)' .`：通過 / passed.
 - `python -m unittest discover -s tests -v`：**120 項測試執行，110 通過、10 略過、0 失敗** / 120 tests run, 110 passed, 10 skipped, 0 failed.
-- `sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz`：清除複製工作樹裡舊版 CMake 快取後，編譯成功 / native build passed after clearing a stale copied CMake cache.
+- `python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz`：清除複製工作樹裡舊版 CMake 快取後，編譯成功 / native build passed after clearing a stale copied CMake cache.
 - `python3 tests/check_placement.py bin/lowyoutpost`：5 組 Java 亂數參考種子全數 PASS / five independent seed placement comparisons passed.
 - `xvfb-run -a python -m unittest discover -s tests -p 'test_gui_*.py' -v`：8 項通過 / eight GUI smoke tests passed.
 - 使用者提供的 `/mnt/data/server.jar`：讀取 `version.json` 得到 Java Edition **26.3**、DataVersion **5023**、執行環境需求 **Java 25**。從其內層 JAR 成功核對 outpost/village placement、biome tag 與原版模板；16×30×16 基板、15×21×15 瞭望塔、水平剛性連接相對 Y 位移 0。/ Inspected the user-provided 26.3 bundled server assets directly.
@@ -150,7 +150,7 @@
 
 ```sh
 # 來源為使用者提供的 LowYSwampHut 2.0.1 壓縮包
-sh build.sh /mnt/data/LowYSwampHut-2.0.1.tar.gz
+python3 scripts/build_native.py terrain /mnt/data/LowYSwampHut-2.0.1.tar.gz
 python3 -m compileall -q .
 python3 -m unittest discover -s tests -v
 python3 tests/check_placement.py bin/lowyoutpost

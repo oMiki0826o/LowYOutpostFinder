@@ -29,26 +29,20 @@ LowY Outpost Finder 用於研究 Minecraft Java 版低高度掠奪者前哨站�
 git clone https://github.com/oMiki0826o/LowYOutpostFinder.git
 cd LowYOutpostFinder
 python3 --version
-python3 finder.py --help
+python3 -m lowy_outpost_finder --help
 ```
 
-在 Windows 可將上述 `python3` 替換為 `py`，視 Python 安裝方式而定。若從 GitHub 下載 ZIP，解壓縮後進入含 `finder.py` 的資料夾即可。
+在 Windows 可將上述 `python3` 替換為 `py`，視 Python 安裝方式而定。若從 GitHub 下載 ZIP，解壓縮後進入含 `LowYOutpostFinder.py` 的資料夾即可。
 
 ## 3. 最容易使用的 GUI
 
 開啟繁體中文介面：
 
 ```bash
-python3 start_gui.py
+python3 LowYOutpostFinder.py
 ```
 
-直接啟動英文介面：
-
-```bash
-python3 start_gui.py --lang en-US
-```
-
-Windows 也可使用 `start_gui.bat`；macOS 提供 `start_gui.command`。介面上方可切換語言，並選擇以下模式：
+在 Windows 可執行 `py LowYOutpostFinder.py`。介面上方可切換繁體中文／英文，並選擇以下模式：
 
 | GUI 模式 | 用途 | 使用時機 |
 | --- | --- | --- |
@@ -86,7 +80,7 @@ GUI 預設的完整結構中心判定為 `structure_center_y < -37`。這個數�
 ### A. 只搜尋候選座標（最快）
 
 ```bash
-python3 finder.py candidates \
+python3 -m lowy_outpost_finder candidates \
   --version 1.21.8 \
   --seed 123 \
   --radius 8192 \
@@ -98,7 +92,7 @@ python3 finder.py candidates \
 ### 全圖候選（不用生成世界）
 
 ```sh
-python3 finder.py full-map --version 1.21.8 --seed 123 \
+python3 -m lowy_outpost_finder full-map --version 1.21.8 --seed 123 \
   --strategy nearest --top 100 --out results/world-nearest.csv
 ```
 
@@ -109,7 +103,7 @@ python3 finder.py full-map --version 1.21.8 --seed 123 \
 先使用**離線世界副本**，路徑必須指向包含 `level.dat` 和 `region/` 的世界資料夾。
 
 ```bash
-python3 finder.py world \
+python3 -m lowy_outpost_finder world \
   --world /path/to/world-copy \
   --max-y 0 \
   --out saved-outposts.csv
@@ -120,7 +114,7 @@ python3 finder.py world \
 ### C. 對照候選 CSV 與世界
 
 ```bash
-python3 finder.py verify \
+python3 -m lowy_outpost_finder verify \
   --world /path/to/world-copy \
   --candidates candidates.csv \
   --out verified-candidates.csv
@@ -132,7 +126,7 @@ CSV 的種子與版號必須和世界一致。`not_generated`、`absent`、`inva
 
 ```bash
 java -version
-python3 finder.py seed-vanilla \
+python3 -m lowy_outpost_finder seed-vanilla \
   --version 1.21.8 \
   --seed 123 \
   --server-jar /path/to/server.jar \
@@ -159,8 +153,8 @@ python3 finder.py seed-vanilla \
 要先提供合法取得的 LowYSwampHut 2.0.1 原始碼壓縮檔，並在 macOS/Linux 安裝 CMake、C 編譯器：
 
 ```bash
-sh build.sh /path/to/LowYSwampHut-2.0.1.tar.gz
-python3 finder.py estimate \
+python3 scripts/build_native.py terrain /path/to/LowYSwampHut-2.0.1.tar.gz
+python3 -m lowy_outpost_finder estimate \
   --version 1.21.8 \
   --seed 123 \
   --radius 8192 \
@@ -191,7 +185,7 @@ python3 finder.py estimate \
 
 **Q：出現 Java 版本錯誤？** 執行 `java -version`，並在指令使用 `--java` 指定對應版本的 Java 路徑。1.21.8 應使用 Java 21。
 
-**Q：Tkinter 無法開啟？** 安裝適用你 Python 環境的 Tkinter，或直接改用 `finder.py` 命令列；遠端無顯示器的終端機不適合開 GUI。
+**Q：Tkinter 無法開啟？** 安裝適用你 Python 環境的 Tkinter，或直接改用 `python3 -m lowy_outpost_finder` 命令列；遠端無顯示器的終端機不適合開 GUI。
 
 **Q：為什麼花很久、CPU／記憶體很高？** `seed-vanilla` 會啟動原版伺服器並生成區塊；先用較小 `--limit` 測試，確定負載可接受後再增加。`candidates` 則不啟動伺服器。
 
@@ -208,7 +202,7 @@ python3 finder.py estimate \
 
 ```bash
 python3 -m compileall -q .
-python3 -m unittest discover -s tests -v
+python3 scripts/run_headless_tests.py
 ```
 
 舊版 GitHub Actions 在 Ubuntu／Windows 曾失敗；修復版已調整測試及工作流程，但跨平台重新執行結果必須以實際 Actions 為準。問題回報請包含：Minecraft 版本、種子、使用模式、操作系統、Python／Java 版本、精簡的錯誤訊息與去除密碼的日誌。
@@ -232,7 +226,7 @@ python3 -m unittest discover -s tests -v
 ### 安裝前的原版 Java 與 JAR 預檢
 
 ```sh
-python3 finder.py server-check --version 1.21.8 \
+python3 -m lowy_outpost_finder server-check --version 1.21.8 \
   --server-jar /path/to/server.jar --java java --out results/server-check.json
 ```
 

@@ -4,7 +4,7 @@
 
 從 Minecraft Java 1.21 起的版本，官方伺服器 JAR 可能是一個啟動包，真正的遊戲資源放在 `META-INF/versions/<版本>/server-<版本>.jar`。本工具會在記憶體中開啟該內層資料，不會執行檔案，也不會修改使用者的 `server.jar`。
 
-執行 `python3 finder.py assets-audit --version 26.3 --server-jar /path/to/server.jar --out metadata.json`，可以檢查相符版本的前哨站放置設定、村莊排除設定、生態域標籤、Jigsaw 基板與瞭望塔尺寸，以及單一確定的剛性高度差。程式會拒絕不一致的 JAR 宣告版本與無法解析的資源。
+執行 `python3 -m lowy_outpost_finder assets-audit --version 26.3 --server-jar /path/to/server.jar --out metadata.json`，可以檢查相符版本的前哨站放置設定、村莊排除設定、生態域標籤、Jigsaw 基板與瞭望塔尺寸，以及單一確定的剛性高度差。程式會拒絕不一致的 JAR 宣告版本與無法解析的資源。
 
 提供的 26.3 `server.jar` 之 `version.json` 宣告 Java 25、世界 DataVersion 5023；基板模板為 16×30×16、瞭望塔 15×21×15，剛性連接高度位移為 0。輸出與檔案雜湊記錄在個別核對報告中。
 
@@ -14,7 +14,7 @@
 
 Modern versioned Minecraft server JARs may bundle their game data in one nested file at `META-INF/versions/<version>/server-<version>.jar`. The tool opens that game data in memory, without execution or modifying the JAR.
 
-Run `python3 finder.py assets-audit --version 26.3 --server-jar /path/to/server.jar --out metadata.json` to check the versioned structure sets, biome tag, base/tower template dimensions and supported rigid connector vertical offset. Incompatible version metadata and unknown resource layouts are rejected rather than guessed.
+Run `python3 -m lowy_outpost_finder assets-audit --version 26.3 --server-jar /path/to/server.jar --out metadata.json` to check the versioned structure sets, biome tag, base/tower template dimensions and supported rigid connector vertical offset. Incompatible version metadata and unknown resource layouts are rejected rather than guessed.
 
 The provided 26.3 archive declares Java 25 and world DataVersion 5023. Its baseplate is 16×30×16, watchtower 15×21×15 and conditional vertical connector offset 0.
 

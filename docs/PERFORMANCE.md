@@ -23,7 +23,7 @@
 
 ```sh
 python3 scripts/benchmark.py --seed 123 --radii 8192,32768,65536 --rounds 3
-sh build.sh /path/to/LowYSwampHut-2.0.1.tar.gz
+python3 scripts/build_native.py terrain /path/to/LowYSwampHut-2.0.1.tar.gz
 python3 scripts/benchmark.py --seed 123 --radii 8192,32768 --rounds 3 --native bin/lowyoutpost
 ```
 
