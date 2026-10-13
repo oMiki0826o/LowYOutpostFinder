@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0 — 2026-10-13
+
+- Published the first public LowY Outpost Finder release under the MIT License.
+- Added seed-derived outpost candidate scanning and nearest-origin ordering.
+- Added matching-server verification with persisted structure bounds and a default `structure_center_y < -37` stopping threshold.
+- Kept candidate, approximate, and verified results explicitly separated.
+- Documented that real Minecraft world-generation parity and farm output are not implied by offline tests.
+
 ## 2.13.0 — 2026-10-13
 
 - Added nearest-origin live search stopping on a verified full-structure center threshold (`--center-y-below`, default `-37`) and exported structure bounds/center plus squared distance.
