@@ -18,8 +18,8 @@ import unittest
 import zlib
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import finder
-from nbt import NBTError, Region, parse_nbt
+import lowy_outpost_finder.cli as finder
+from lowy_outpost_finder.nbt import NBTError, Region, parse_nbt
 
 
 # ── Minimal Java NBT test fixture writer (not used by production code) ──
@@ -178,7 +178,7 @@ class FinderTests(unittest.TestCase):
             args = SimpleNamespace(world=world, version='auto', radius=2048,
                     limit=1, priority='near-origin', core_archive=None,
                     audit=world / 'audit.csv', out=world / 'result.csv', max_y=0)
-            with patch('live.run_live', return_value=[row]):
+            with patch('lowy_outpost_finder.live.run_live', return_value=[row]):
                 finder.run_search_live(args)
             with args.out.open() as fp:
                 result = list(csv.DictReader(fp))

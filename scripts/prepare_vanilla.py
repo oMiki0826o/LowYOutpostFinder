@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from versions import SUPPORTED, check_version
+from lowy_outpost_finder.versions import SUPPORTED, check_version
 
 MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
 MAX_META_BYTES = 5_000_000

@@ -6,13 +6,13 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from finder import main
+from lowy_outpost_finder.cli import main
 
 class ArtifactSafetyTests(unittest.TestCase):
     def test_summary_collision_rejected_before_world_is_read(self):
         with tempfile.TemporaryDirectory() as td:
             path=Path(td)/'result.csv'
-            with patch('finder.confirmed_world') as read_world:
+            with patch('lowy_outpost_finder.cli.confirmed_world') as read_world:
                 self.assertEqual(main(['search-live','--world',td,
                                        '--out',str(path),'--summary',str(path)]),2)
                 read_world.assert_not_called()
@@ -21,7 +21,7 @@ class ArtifactSafetyTests(unittest.TestCase):
     def test_checkpoint_cannot_overwrite_filtered_hits(self):
         with tempfile.TemporaryDirectory() as td:
             path=Path(td)/'result.csv'
-            with patch('finder.confirmed_world') as read_world:
+            with patch('lowy_outpost_finder.cli.confirmed_world') as read_world:
                 self.assertEqual(main(['search-live','--world',td,
                                        '--out',str(path),'--checkpoint',str(path)]),2)
                 read_world.assert_not_called()

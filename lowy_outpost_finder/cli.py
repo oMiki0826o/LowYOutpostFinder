@@ -19,8 +19,8 @@ import heapq
 import math
 from types import SimpleNamespace
 
-from nbt import NBTError, REGION_NAME, Region, load_level, region_filename
-from versions import check_version, detect_world_version, SUPPORTED
+from .nbt import NBTError, REGION_NAME, Region, load_level, region_filename
+from .versions import check_version, detect_world_version, SUPPORTED
 
 MASK48 = (1 << 48) - 1
 MASK64 = (1 << 64) - 1
@@ -355,8 +355,8 @@ def write_csv(path: Path | None, rows, fields) -> None:
 def run_candidates(args):
     check_version(getattr(args, 'version', '1.21.8'))
     if getattr(args, "game_jar", None):
-        from placement_assets import validate_placement_assets
-        from game_archive import require_matching_game_version
+        from .placement_assets import validate_placement_assets
+        from .game_archive import require_matching_game_version
         require_matching_game_version(args.game_jar, args.version)
         validate_placement_assets(args.game_jar)
     write_csv(args.out, (dict(version=args.version, **row) for row in candidates(
@@ -461,7 +461,7 @@ def run_estimate(args):
     if check_version(getattr(args, 'version', '1.21.8')) != '1.21.8':
         raise ValueError('Optional terrain approximation is not version-verified outside 1.21.8')
     if getattr(args, 'game_jar', None):
-        from game_archive import require_matching_game_version
+        from .game_archive import require_matching_game_version
         require_matching_game_version(args.game_jar, args.version)
     root = Path(__file__).resolve().parent
     binary = root / 'bin' / 'lowyoutpost'
@@ -473,7 +473,7 @@ def run_estimate(args):
     cmd = [str(binary), '--seed', str(args.seed), '--radius', str(args.radius),
            '--max-y', str(args.max_y), '--top', str(args.top)]
     if getattr(args, 'game_jar', None):
-        from start_geometry import load_outpost_assets
+        from .start_geometry import load_outpost_assets
         template = load_outpost_assets(args.game_jar)
         cmd += ['--template-width', str(template.size[0]),
                 '--template-depth', str(template.size[2])]
@@ -501,7 +501,7 @@ def validate_report_paths(*, out: Path | None, audit: Path | None = None,
 
 def run_search_live(args):
     """One-command candidate search -> vanilla generation -> confirmed low-Y only."""
-    from live import run_live
+    from .live import run_live
     validate_report_paths(out=args.out, audit=getattr(args, 'audit', None),
                           checkpoint=getattr(args, 'checkpoint', None),
                           summary=getattr(args, 'summary', None))
@@ -537,9 +537,9 @@ def run_search_live(args):
                    '--max-y', '320', '--skip-biome', '--top', str(args.limit),
                    '--csv', str(estimated_path)]
             if getattr(args, 'game_jar', None):
-                from game_archive import require_matching_game_version
+                from .game_archive import require_matching_game_version
                 require_matching_game_version(args.game_jar, world_ver)
-                from start_geometry import load_outpost_assets
+                from .start_geometry import load_outpost_assets
                 meta = load_outpost_assets(args.game_jar)
                 cmd.extend(['--template-width', str(meta.size[0]),
                             '--template-depth', str(meta.size[2])])
@@ -570,7 +570,7 @@ def run_search_live(args):
         live_args.stop_max_y = getattr(args, 'max_y', None)
         checked = run_live(live_args)
     # Guarantee that the public "hits" file contains no estimates or absent starts.
-    from search_conditions import accepted_tower, summarize_search
+    from .search_conditions import accepted_tower, summarize_search
     center_limit = getattr(args, 'center_y_below', None)
     max_y = getattr(args, 'max_y', None)
     confirmed = [dict(r, version=world_ver) for r in checked
@@ -607,7 +607,7 @@ def run_search_live(args):
                   warning='A lowest-Y certificate is only valid after all candidates in the '
                           'search square have conclusive saved-world evidence; never for the entire world.')
     if getattr(args, 'summary', None):
-        from geometry_audit import write_json_atomic
+        from .geometry_audit import write_json_atomic
         write_json_atomic(args.summary, report)
     print(f'vanilla-verified towers: {len(confirmed)} / {len(checked)} generated candidates; '
           f'nearest_status={report["nearest_status"]}; '
@@ -624,14 +624,14 @@ def run_tower_project(args):
     reading the *post-carver* existing-world surface is not equivalent.
     """
     import json
-    from start_geometry import projection
-    from tower_geometry import load_tower_blueprint, predict_vertical
-    from geometry_audit import write_json_atomic
+    from .start_geometry import projection
+    from .tower_geometry import load_tower_blueprint, predict_vertical
+    from .geometry_audit import write_json_atomic
 
     check_version(args.version)
     if not is_candidate_start(args.seed, args.chunk_x, args.chunk_z):
         raise ValueError('Not an outpost placement candidate for this seed')
-    from game_archive import require_matching_game_version
+    from .game_archive import require_matching_game_version
     require_matching_game_version(args.game_jar, args.version)
     blueprint = load_tower_blueprint(args.game_jar)
     position = projection(args.seed, args.chunk_x, args.chunk_z, blueprint.base_size)
@@ -708,29 +708,29 @@ def main(argv=None) -> int:
     a.add_argument('--world-surface-wg', type=int, required=True)
     a.add_argument('--out', type=Path, help='JSON 結果（可省略，改輸出標準輸出）')
     a.set_defaults(run=run_tower_project)
-    from full_map import add_command as add_full_map_command
+    from .full_map import add_command as add_full_map_command
     add_full_map_command(commands)
-    from seed_geometry import add_command as add_seed_geometry_command
+    from .seed_geometry import add_command as add_seed_geometry_command
     add_seed_geometry_command(commands)
-    from server_check import add_command as add_server_check_command
+    from .server_check import add_command as add_server_check_command
     add_server_check_command(commands)
-    from asset_audit import add_command as add_assets_audit_command
+    from .asset_audit import add_command as add_assets_audit_command
     add_assets_audit_command(commands)
-    from geometry_audit import add_command as add_geometry_audit_command
+    from .geometry_audit import add_command as add_geometry_audit_command
     add_geometry_audit_command(commands)
-    from noise_witness import add_command as add_noise_witness_command
+    from .noise_witness import add_command as add_noise_witness_command
     add_noise_witness_command(commands)
-    from worldgen_contract import add_command as add_worldgen_contract_command
+    from .worldgen_contract import add_command as add_worldgen_contract_command
     add_worldgen_contract_command(commands)
-    from structure_contract import add_command as add_structure_contract_command
+    from .structure_contract import add_command as add_structure_contract_command
     add_structure_contract_command(commands)
-    from certification import add_command as add_certification_command
+    from .certification import add_command as add_certification_command
     add_certification_command(commands)
-    from region_certificate import add_command as add_region_certificate_command
+    from .region_certificate import add_command as add_region_certificate_command
     add_region_certificate_command(commands)
-    from live import add_live_command
+    from .live import add_live_command
     add_live_command(commands)
-    from vanilla_oracle import add_vanilla_command
+    from .vanilla_oracle import add_vanilla_command
     add_vanilla_command(commands)
     a = commands.add_parser('search-live', help='候選搜尋 → 同版原版伺服器生成 → NBT 讀取塔樓')
     a.add_argument('--version', choices=['auto', *sorted(SUPPORTED)], default='auto')

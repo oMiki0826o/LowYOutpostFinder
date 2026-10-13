@@ -21,7 +21,10 @@ class ReleaseTests(unittest.TestCase):
             root.mkdir()
             (root / 'VERSION').write_text('2.1.0\n')
             (root / 'README.md').write_text('Read me\n')
-            (root / 'finder.py').write_text('print("hello")\n')
+            (root / 'LowYOutpostFinder.py').write_text('print("hello")\n')
+            package_dir = root / 'lowy_outpost_finder'
+            package_dir.mkdir()
+            (package_dir / 'cli.py').write_text('def main(): return 0\n')
             for name in ('.git/config', '.build/temp.o', 'bin/scanner', 'data/secret.txt',
                          'results/hits.csv', 'world/region/r.0.0.mca', '__pycache__/hi.pyc',
                          '.env', 'server.properties'):
@@ -33,7 +36,8 @@ class ReleaseTests(unittest.TestCase):
             with zipfile.ZipFile(zip_path) as z:
                 files = z.namelist()
                 self.assertIn('project/VERSION', files)
-                self.assertIn('project/finder.py', files)
+                self.assertIn('project/LowYOutpostFinder.py', files)
+                self.assertIn('project/lowy_outpost_finder/cli.py', files)
                 self.assertIn('project/SHA256SUMS.txt', files)
                 self.assertTrue(all('private' not in z.read(name).decode() for name in files))
                 self.assertEqual(z.testzip(), None)

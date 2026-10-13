@@ -5,8 +5,8 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from tower_geometry import load_tower_blueprint
-from geometry_audit import audit_tower_relation
+from lowy_outpost_finder.tower_geometry import load_tower_blueprint
+from lowy_outpost_finder.geometry_audit import audit_tower_relation
 from test_tower_geometry import make_jar
 
 

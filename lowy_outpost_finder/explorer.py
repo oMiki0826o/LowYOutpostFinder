@@ -18,8 +18,8 @@ import threading
 import time
 from typing import Callable, Iterable
 
-from finder import OUTPOST, pass_legacy_frequency, pass_village_exclusion, region_position, signed_seed, write_csv, is_candidate_start
-from versions import check_version
+from .cli import OUTPOST, pass_legacy_frequency, pass_village_exclusion, region_position, signed_seed, write_csv, is_candidate_start
+from .versions import check_version
 
 MAX_REGIONS = 5_000_000
 MAX_SEEDS = 10_000

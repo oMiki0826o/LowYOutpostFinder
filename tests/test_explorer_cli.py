@@ -16,7 +16,7 @@ class ExplorerCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             out = Path(td) / 'out.csv'
             coords = Path(td) / 'coords.txt'
-            p = subprocess.run([sys.executable, str(ROOT / 'explorer.py'), '--seed', '123',
+            p = subprocess.run([sys.executable, '-m', 'lowy_outpost_finder.explorer', '--seed', '123',
                 '--min-x', '-16', '--max-x', '16', '--min-z', '-16', '--max-z', '16',
                 '--threads', '2', '--top', '500', '--out', str(out), '--export-tp', str(coords)],
                 capture_output=True, text=True, cwd=ROOT)
@@ -30,7 +30,7 @@ class ExplorerCliTests(unittest.TestCase):
 
     def test_cli_refuses_sort_y_without_y(self):
         with tempfile.TemporaryDirectory() as td:
-            p = subprocess.run([sys.executable, str(ROOT / 'explorer.py'), '--seed', '123',
+            p = subprocess.run([sys.executable, '-m', 'lowy_outpost_finder.explorer', '--seed', '123',
                 '--min-x', '-16', '--max-x', '16', '--min-z', '-16', '--max-z', '16',
                 '--sort', 'y', '--out', str(Path(td) / 'out.csv')],
                 capture_output=True, text=True, cwd=ROOT)

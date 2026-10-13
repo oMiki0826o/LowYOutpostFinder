@@ -8,7 +8,7 @@ import sys
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from gui_model import SearchRequest, build_arguments
+from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
 
 
 class GuiModelFullMapTests(unittest.TestCase):
@@ -56,7 +56,7 @@ class GuiProgressTests(unittest.TestCase):
             raise unittest.SkipTest('No usable Tk display')
 
     def test_bilingual_fullmap_mode_and_progress(self):
-        from gui import App
+        from lowy_outpost_finder.gui import App
         app = App()
         try:
             self.assertIn('full-map', [key for key, _ in app.mode_choices])

@@ -9,7 +9,7 @@ import unittest
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from worldgen_contract import inspect_contract
+from lowy_outpost_finder.worldgen_contract import inspect_contract
 
 ROOT = 'data/minecraft/worldgen/'
 

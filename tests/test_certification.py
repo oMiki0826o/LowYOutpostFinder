@@ -10,8 +10,8 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from certification import certify_samples
-from noise_witness import run_compare, run_witnesses, WITNESS_FIELDS
+from lowy_outpost_finder.certification import certify_samples
+from lowy_outpost_finder.noise_witness import run_compare, run_witnesses, WITNESS_FIELDS
 
 
 def witnesses(path, *, asset='abc', y=-30):
@@ -57,7 +57,7 @@ class CertificationTests(unittest.TestCase):
 
     def test_cli_rejects_mismatched_game_jar_without_overwriting_output(self):
         import zipfile
-        from certification import run_certification
+        from lowy_outpost_finder.certification import run_certification
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
             witness=witnesses(root/'w.csv');pred=estimates(root/'e.csv')
@@ -95,7 +95,7 @@ class CertificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d);out=p/'keep.csv';out.write_text('pristine')
             args=argparse.Namespace(world=p, candidates=p, game_jar=p, out=out, summary=None, require_samples=True)
-            with patch('noise_witness.audit_world', return_value=([{
+            with patch('lowy_outpost_finder.noise_witness.audit_world', return_value=([{
                 'version':'1.21.8', 'seed':123, 'chunk_x':0, 'chunk_z':0,
                 'status':'not_full'}],{'version':'1.21.8','seed':123,'game_asset_sha256':'abc'})):
                 with self.assertRaisesRegex(ValueError,'No verified'):

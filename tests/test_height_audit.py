@@ -8,7 +8,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from height_audit import compare_heights
+from lowy_outpost_finder.height_audit import compare_heights
 
 
 def write_rows(path: Path, records: list[dict]):

@@ -9,7 +9,7 @@ import tempfile
 import unittest
 import zipfile
 
-from tower_geometry import load_tower_blueprint, predict_vertical, TowerGeometryError
+from lowy_outpost_finder.tower_geometry import load_tower_blueprint, predict_vertical, TowerGeometryError
 
 
 def tag(typ, name, payload):

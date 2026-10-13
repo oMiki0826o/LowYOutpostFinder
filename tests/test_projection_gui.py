@@ -2,8 +2,8 @@
 Modification: 2026-10-13 — bilingual UI supports optional exact Jigsaw geometry metadata.
 """
 import unittest
-from gui_model import SearchRequest, build_arguments
-from i18n import tr
+from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
+from lowy_outpost_finder.i18n import tr
 
 class ProjectionGuiTests(unittest.TestCase):
     def test_en_and_zh_label_exist(self):

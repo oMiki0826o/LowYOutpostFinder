@@ -11,6 +11,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ProjectLayoutTests(unittest.TestCase):
+    def test_package_import_surface(self) -> None:
+        cli = importlib.import_module("lowy_outpost_finder.cli")
+        gui = importlib.import_module("lowy_outpost_finder.gui")
+        full_map = importlib.import_module("lowy_outpost_finder.full_map")
+        versions = importlib.import_module("lowy_outpost_finder.versions")
+
+        for name in ("main", "candidates", "WorldChunks"):
+            self.assertTrue(hasattr(cli, name), name)
+        self.assertTrue(callable(gui.main))
+        self.assertTrue(callable(full_map.scan))
+        self.assertTrue(hasattr(versions, "VERSIONS"))
+
     def test_root_has_one_python_launcher(self) -> None:
         python_files = sorted(path.name for path in ROOT.glob("*.py"))
         self.assertEqual(python_files, ["LowYOutpostFinder.py"])

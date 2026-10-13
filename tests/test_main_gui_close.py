@@ -3,7 +3,7 @@ Modification: 2026-10-13 — GUI root must release scheduled Tk callbacks on clo
 """
 import tkinter as tk
 import unittest
-from gui import App
+from lowy_outpost_finder.gui import App
 
 
 class MainGuiCloseTests(unittest.TestCase):

@@ -11,10 +11,10 @@ import hashlib
 import json
 from pathlib import Path
 import zipfile
-from game_archive import open_game_assets
+from .game_archive import open_game_assets
 
-from finder import JavaRandom, MASK64, to_int32
-from nbt import NBTError, inflate_limited, parse_nbt
+from .cli import JavaRandom, MASK64, to_int32
+from .nbt import NBTError, inflate_limited, parse_nbt
 
 
 @dataclass(frozen=True)

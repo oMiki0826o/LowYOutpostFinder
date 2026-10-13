@@ -9,7 +9,7 @@ import unittest
 
 from test_start_geometry import sample_jar
 from test_finder import generated_world
-import finder
+import lowy_outpost_finder.cli as finder
 
 class ProjectionPriorityTests(unittest.TestCase):
     def test_priority_native_uses_supplied_template(self):
@@ -28,7 +28,7 @@ class ProjectionPriorityTests(unittest.TestCase):
                     path=Path(cmd[cmd.index('--csv')+1])
                     path.write_text('version,seed,chunk_x,chunk_z,x,z,projected_surface_y,biome_id,classification\n'
                         f"1.21.8,123,{candidate['chunk_x']},{candidate['chunk_z']},{candidate['x']},{candidate['z']},64,1,estimated_only\n",encoding='utf-8')
-            with patch('finder.subprocess.run',side_effect=capture), patch('live.run_live',return_value=[]):
+            with patch('lowy_outpost_finder.cli.subprocess.run',side_effect=capture), patch('lowy_outpost_finder.live.run_live',return_value=[]):
                 finder.run_search_live(opts)
             command=next(c for c in calls if '--csv' in c)
             self.assertEqual(command[command.index('--template-width')+1],'13')

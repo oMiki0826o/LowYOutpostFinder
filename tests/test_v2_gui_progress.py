@@ -16,7 +16,7 @@ class GuiProgressTests(unittest.TestCase):
             raise unittest.SkipTest('No graphical display')
 
     def test_live_log_updates_progress_without_counting_unverified_y_as_success(self):
-        from gui import App
+        from lowy_outpost_finder.gui import App
         app=App(language='zh-TW')
         try:
             app._update_progress_from_log('[2/10] 32,41 : absent')

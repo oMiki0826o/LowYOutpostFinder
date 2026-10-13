@@ -15,7 +15,7 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from finder import candidates
+from lowy_outpost_finder.cli import candidates
 
 
 def parse_radii(value: str) -> list[int]:

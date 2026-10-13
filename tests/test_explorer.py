@@ -8,8 +8,8 @@ import tempfile
 import threading
 import unittest
 
-from finder import candidates
-from explorer import RegionBounds, load_seeds, candidate_area, Explorer, export_seed_list, export_teleports
+from lowy_outpost_finder.cli import candidates
+from lowy_outpost_finder.explorer import RegionBounds, load_seeds, candidate_area, Explorer, export_seed_list, export_teleports
 
 
 class ExplorerTests(unittest.TestCase):

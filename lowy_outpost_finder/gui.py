@@ -18,12 +18,12 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from gui_model import SearchRequest, build_arguments
-from explorer_gui import AdvancedWindow
-from i18n import CATALOGS, tr
-from versions import VERSIONS
+from .gui_model import SearchRequest, build_arguments
+from .explorer_gui import AdvancedWindow
+from .i18n import CATALOGS, tr
+from .versions import VERSIONS
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 PROJECT_VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 MODES = [(key, 'mode_' + key) for key in
          ('candidates', 'full-map', 'seed-geometry', 'estimate', 'world', 'verify', 'search-live', 'seed-vanilla')]

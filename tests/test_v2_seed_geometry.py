@@ -6,10 +6,10 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from finder import main, candidates
+from lowy_outpost_finder.cli import main, candidates
 from test_start_geometry import sample_jar
 from test_placement_assets import add_assets
-from start_geometry import projection, load_outpost_assets
+from lowy_outpost_finder.start_geometry import projection, load_outpost_assets
 
 
 class SeedGeometryTests(unittest.TestCase):
@@ -35,7 +35,7 @@ class SeedGeometryTests(unittest.TestCase):
                 self.assertNotIn('watchtower_y',row)
 
     def test_gui_requires_jar_and_accepts_geometry_mode(self):
-        from gui_model import SearchRequest,build_arguments
+        from lowy_outpost_finder.gui_model import SearchRequest,build_arguments
         with self.assertRaises(ValueError):
             build_arguments(SearchRequest(mode='seed-geometry',out='geometry.csv'))
         args,_=build_arguments(SearchRequest(mode='seed-geometry',out='geometry.csv',

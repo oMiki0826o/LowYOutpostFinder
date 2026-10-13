@@ -7,8 +7,8 @@ import time
 import tkinter as tk
 import unittest
 
-from explorer_gui import AdvancedWindow, LABELS
-from gui import App
+from lowy_outpost_finder.explorer_gui import AdvancedWindow, LABELS
+from lowy_outpost_finder.gui import App
 
 
 class ExplorerGuiTests(unittest.TestCase):

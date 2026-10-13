@@ -10,9 +10,9 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from finder import candidates
-from start_geometry import projection
-from geometry_audit import expected_base_box, audit_piece, audit_world
+from lowy_outpost_finder.cli import candidates
+from lowy_outpost_finder.start_geometry import projection
+from lowy_outpost_finder.geometry_audit import expected_base_box, audit_piece, audit_world
 from tests.test_start_geometry import sample_jar
 from tests.test_finder import generated_world
 

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 class EnglishGuiTests(unittest.TestCase):
     def setUp(self):
         try:
-            from gui import App
+            from lowy_outpost_finder.gui import App
             self.app = App(language='en-US')
         except tk.TclError:
             self.skipTest('Tk requires a working window display')
@@ -115,7 +115,7 @@ class EnglishGuiTests(unittest.TestCase):
         self.assertFalse(app.groups['priority'].winfo_manager())
 
     def test_english_candidate_mode_cli_payload(self):
-        from gui_model import SearchRequest, build_arguments
+        from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
         app = self.app
         req = SearchRequest(mode='candidates', version='1.21.8', seed='22',
                             radius='1024', out='somewhere.csv')

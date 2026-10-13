@@ -8,12 +8,12 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from gui_model import SearchRequest, build_arguments
+from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
 
 
 class TranslationTests(unittest.TestCase):
     def test_catalogue_covers_gui_components_in_both_languages(self):
-        from i18n import CATALOGS, tr
+        from lowy_outpost_finder.i18n import CATALOGS, tr
         self.assertEqual(set(CATALOGS), {'zh-TW', 'en-US'})
         self.assertEqual(set(CATALOGS['zh-TW']), set(CATALOGS['en-US']))
         for key, text in CATALOGS['en-US'].items():
@@ -44,7 +44,7 @@ class TranslationTests(unittest.TestCase):
                 mode='estimate', version='26.3', out='r.csv'), language='en-US')
 
     def test_english_help_and_gui_translator_without_display(self):
-        from i18n import tr
+        from lowy_outpost_finder.i18n import tr
         self.assertIn('English', tr('en-US', 'language_caption'))
         self.assertIn('approximate', tr('en-US', 'tip_estimate').lower())
         self.assertIn('not', tr('en-US', 'banner_ready').lower())

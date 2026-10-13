@@ -8,8 +8,8 @@ import tempfile
 import threading
 import unittest
 
-from explorer import Explorer
-from finder import candidates, examine
+from lowy_outpost_finder.explorer import Explorer
+from lowy_outpost_finder.cli import candidates, examine
 
 
 class NativeIntegrityTests(unittest.TestCase):

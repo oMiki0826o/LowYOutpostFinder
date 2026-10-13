@@ -2,7 +2,7 @@
 Modification: 2026-10-13 — acceptance predicate and honest nearest-result evidence.
 """
 import unittest
-from search_conditions import accepted_tower, summarize_search
+from lowy_outpost_finder.search_conditions import accepted_tower, summarize_search
 
 
 class SearchConditionsTests(unittest.TestCase):

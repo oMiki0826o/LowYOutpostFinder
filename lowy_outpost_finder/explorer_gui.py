@@ -17,11 +17,11 @@ import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-from explorer import (Explorer, RegionBounds, MAX_REGIONS, FIELDS, load_seeds,
+from .explorer import (Explorer, RegionBounds, MAX_REGIONS, FIELDS, load_seeds,
                       export_seed_list, export_teleports)
-from finder import signed_seed, write_csv
+from .cli import signed_seed, write_csv
 import argparse
-from versions import VERSIONS
+from .versions import VERSIONS
 
 LABELS = {
     'zh-TW': {

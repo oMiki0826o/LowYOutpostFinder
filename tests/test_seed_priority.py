@@ -9,7 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from gui_model import SearchRequest, build_arguments
+from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
 
 
 class SeedPriorityTests(unittest.TestCase):
@@ -38,7 +38,7 @@ class SeedPriorityTests(unittest.TestCase):
             build_arguments(req, language='en-US')
 
     def test_seed_vanilla_passes_requested_priority_to_live_search(self):
-        from vanilla_oracle import run_vanilla
+        from lowy_outpost_finder.vanilla_oracle import run_vanilla
         from tests.test_vanilla_oracle import VanillaOracleTests
         with tempfile.TemporaryDirectory() as td:
             jar = VanillaOracleTests().make_bundle(td)
@@ -51,18 +51,18 @@ class SeedPriorityTests(unittest.TestCase):
                 observed['priority'] = a.priority
                 observed['core_archive'] = a.core_archive
                 a.audit.write_text('status\nabsent\n', encoding='utf8')
-            with patch('vanilla_oracle.subprocess.Popen'), \
-                patch('vanilla_oracle.ensure_compatible_java', return_value=21), \
-                patch('vanilla_oracle._wait_ready'), \
-                patch('vanilla_oracle._stop_server'), \
-                patch('finder.run_search_live', side_effect=check_options):
+            with patch('lowy_outpost_finder.vanilla_oracle.subprocess.Popen'), \
+                patch('lowy_outpost_finder.vanilla_oracle.ensure_compatible_java', return_value=21), \
+                patch('lowy_outpost_finder.vanilla_oracle._wait_ready'), \
+                patch('lowy_outpost_finder.vanilla_oracle._stop_server'), \
+                patch('lowy_outpost_finder.cli.run_search_live', side_effect=check_options):
                 run_vanilla(opts)
             self.assertEqual(observed['priority'], 'terrain')
             self.assertEqual(observed['core_archive'], Path(td) / 'core.tar.gz')
 
     def test_cli_accepts_prioritization_flag(self):
-        import finder
-        with patch('vanilla_oracle.run_vanilla') as fake:
+        import lowy_outpost_finder.cli as finder
+        with patch('lowy_outpost_finder.vanilla_oracle.run_vanilla') as fake:
             result = finder.main(['seed-vanilla', '--version', '1.21.8', '--seed', '123',
                         '--server-jar', 'fake.jar', '--priority', 'terrain',
                         '--out', 'result.csv'])

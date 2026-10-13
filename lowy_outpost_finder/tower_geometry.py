@@ -11,10 +11,10 @@ import hashlib
 import json
 from pathlib import Path
 import zipfile
-from game_archive import open_game_assets
+from .game_archive import open_game_assets
 
-from nbt import NBTError, inflate_limited, parse_nbt
-from start_geometry import load_outpost_assets
+from .nbt import NBTError, inflate_limited, parse_nbt
+from .start_geometry import load_outpost_assets
 
 
 class TowerGeometryError(ValueError):

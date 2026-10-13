@@ -9,8 +9,8 @@ import hashlib
 import json
 from pathlib import Path
 
-from noise_witness import compare_witnesses, read_witnesses
-from geometry_audit import write_json_atomic
+from .noise_witness import compare_witnesses, read_witnesses
+from .geometry_audit import write_json_atomic
 
 
 def _sha(path: Path) -> str:
@@ -49,8 +49,8 @@ def certify_samples(witness_file: Path, estimates_csv: Path, *,
 
 def run_certification(args) -> None:
     # Incomplete/mismatching samples fail BEFORE touching any previous report.
-    from game_archive import require_matching_game_version
-    from start_geometry import load_outpost_assets
+    from .game_archive import require_matching_game_version
+    from .start_geometry import load_outpost_assets
     observed = read_witnesses(args.witnesses)
     if not observed:
         raise ValueError('No verified vanilla observations; cannot certify an empty sample set')

@@ -27,14 +27,14 @@ class TkLifecycleTests(unittest.TestCase):
             raise unittest.SkipTest('No usable desktop display')
 
     def test_close_with_active_worker_marks_cancel_before_teardown(self):
-        from gui import App
+        from lowy_outpost_finder.gui import App
         app = App()
         try:
             class Busy:
                 def is_alive(self):
                     return True
             app.worker = Busy()
-            with patch('gui.messagebox.askyesno', return_value=True):
+            with patch('lowy_outpost_finder.gui.messagebox.askyesno', return_value=True):
                 app._on_close()
             self.assertTrue(app.cancel_requested.is_set())
         finally:
@@ -42,7 +42,7 @@ class TkLifecycleTests(unittest.TestCase):
             app.destroy()
 
     def test_build_and_mode_switch(self):
-        from gui import App
+        from lowy_outpost_finder.gui import App
         app = App()
         try:
             self.assertIn('candidates', [key for key, _ in app.mode_choices])

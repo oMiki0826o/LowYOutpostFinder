@@ -12,8 +12,8 @@ import csv
 import json
 from pathlib import Path
 
-from finder import write_csv
-from geometry_audit import audit_world, write_json_atomic
+from .cli import write_csv
+from .geometry_audit import audit_world, write_json_atomic
 
 WITNESS_FIELDS = ('version', 'seed', 'chunk_x', 'chunk_z', 'sample_x',
                   'sample_z', 'rotation', 'world_surface_wg', 'base_plate_y',
@@ -105,7 +105,7 @@ def read_witnesses(path: Path) -> list[dict]:
 
 
 def compare_witnesses(observed: list[dict], estimates_csv: Path) -> tuple[list[dict], dict]:
-    from geometry_audit import load_estimates
+    from .geometry_audit import load_estimates
     if not observed:
         return [], {'compared': 0, 'maximum_absolute_error': None, 'exact_matches': 0,
                     'global_exactness_proven': False, 'status': 'no_verified_observations'}

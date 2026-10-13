@@ -14,19 +14,19 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from finder import candidates
+from lowy_outpost_finder.cli import candidates
 
 
 class FullMapTests(unittest.TestCase):
     def test_world_grid_covers_both_signed_borders_without_allocating(self):
-        from full_map import RegionGrid
+        from lowy_outpost_finder.full_map import RegionGrid
         grid = RegionGrid(-29999984, 29999984, -29999984, 29999984)
         self.assertGreater(grid.total, 13_000_000_000)
         self.assertEqual(grid.row_col(0), (grid.rx_min, grid.rz_min))
         self.assertEqual(grid.row_col(grid.total - 1), (grid.rx_max, grid.rz_max))
 
     def test_rectangle_placement_equals_bounded_reference_search(self):
-        from full_map import RegionGrid, scan_python
+        from lowy_outpost_finder.full_map import RegionGrid, scan_python
         seed = -123456789
         grid = RegionGrid(-2048, 2048, -2048, 2048)
         winners, matched = scan_python(grid, seed, 0, grid.total, 300, 0, 0)
@@ -36,7 +36,7 @@ class FullMapTests(unittest.TestCase):
                          {(r['chunk_x'], r['chunk_z']) for r in ref})
 
     def test_batch_resume_equals_uninterrupted_and_rejects_changed_parameters(self):
-        from full_map import ScanConfig, scan
+        from lowy_outpost_finder.full_map import ScanConfig, scan
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             out = root / 'partial.csv'
@@ -62,7 +62,7 @@ class FullMapTests(unittest.TestCase):
 
 
     def test_corrupted_checkpoint_candidate_is_rejected(self):
-        from full_map import ScanConfig, scan
+        from lowy_outpost_finder.full_map import ScanConfig, scan
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder) / 'bad.csv'
             cfg = ScanConfig('1.21.8', 123, -1024, 1024, -1024, 1024,
@@ -76,7 +76,7 @@ class FullMapTests(unittest.TestCase):
                 scan(cfg, out, resume=True)
 
     def test_rejects_overwriting_state_or_output_without_resume(self):
-        from full_map import ScanConfig, scan
+        from lowy_outpost_finder.full_map import ScanConfig, scan
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder) / 'x.csv'
             cfg = ScanConfig('1.21.8', 123, -1024, 1024, -1024, 1024,
@@ -87,7 +87,7 @@ class FullMapTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('cc') or shutil.which('clang') or shutil.which('gcc'), 'No C compiler')
     def test_native_same_as_python_for_negative_cells_and_long_seeds(self):
-        from full_map import RegionGrid, scan_python, scan_native
+        from lowy_outpost_finder.full_map import RegionGrid, scan_python, scan_native
         with tempfile.TemporaryDirectory() as folder:
             binpath = Path(folder) / 'region_scan'
             compiler = shutil.which('cc') or shutil.which('clang') or shutil.which('gcc')
@@ -103,7 +103,7 @@ class FullMapTests(unittest.TestCase):
 
 
     def test_global_nearest_matches_exhaustive_bruteforce(self):
-        from full_map import RegionGrid, scan_python, scan_nearest
+        from lowy_outpost_finder.full_map import RegionGrid, scan_python, scan_nearest
         grid = RegionGrid(-10000, 12000, -12000, 9000)
         for seed, x, z in ((123, 0, 0), (-19, -9999, 8100),
                            (9223372036854775807, 1000, -1000)):
@@ -116,14 +116,14 @@ class FullMapTests(unittest.TestCase):
             self.assertEqual(evidence['status'], 'proven_nearest_placement_only')
 
     def test_nearest_handles_search_window_starting_inside_cell_gap(self):
-        from full_map import RegionGrid, scan_nearest, scan_python
+        from lowy_outpost_finder.full_map import RegionGrid, scan_nearest, scan_python
         grid = RegionGrid(369, 4096, 369, 4096)
         expected, _ = scan_python(grid, 0, 0, grid.total, 10, 369, 369)
         actual, _ = scan_nearest(grid, 0, 10, 369, 369)
         self.assertEqual(sorted(actual), sorted(expected))
 
     def test_global_nearest_on_full_world_finishes_without_full_enumeration(self):
-        from full_map import RegionGrid, scan_nearest, WORLD_EDGE
+        from lowy_outpost_finder.full_map import RegionGrid, scan_nearest, WORLD_EDGE
         full = RegionGrid(-WORLD_EDGE, WORLD_EDGE, -WORLD_EDGE, WORLD_EDGE)
         for center_x, center_z in ((0, 0), (WORLD_EDGE, -WORLD_EDGE)):
             hits, evidence = scan_nearest(full, 123, 7, center_x, center_z)
@@ -134,7 +134,7 @@ class FullMapTests(unittest.TestCase):
     def test_cli_partial_reports_no_false_completion(self):
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder) / 'results.csv'
-            result = subprocess.run([sys.executable, str(ROOT / 'finder.py'), 'full-map',
+            result = subprocess.run([sys.executable, '-m', 'lowy_outpost_finder', 'full-map',
                                      '--version', '1.21.8', '--seed', '123',
                                      '--x-min', '-6000', '--x-max', '6000',
                                      '--z-min', '-6000', '--z-max', '6000',

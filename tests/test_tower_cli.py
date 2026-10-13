@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from finder import candidates, main
+from lowy_outpost_finder.cli import candidates, main
 from test_tower_geometry import make_jar
 
 

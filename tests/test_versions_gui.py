@@ -7,9 +7,9 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from gui_model import SearchRequest, build_arguments
-from versions import check_version, detect_world_version
-import finder
+from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
+from lowy_outpost_finder.versions import check_version, detect_world_version
+import lowy_outpost_finder.cli as finder
 
 
 class VersionsAndGuiTests(unittest.TestCase):

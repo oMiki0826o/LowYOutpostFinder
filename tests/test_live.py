@@ -8,7 +8,7 @@ import sys
 import threading
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from live import RCON, RCONError, query_marked
+from lowy_outpost_finder.live import RCON, RCONError, query_marked
 
 
 class LiveTests(unittest.TestCase):

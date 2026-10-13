@@ -12,7 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 import zipfile
-from game_archive import open_game_assets
+from .game_archive import open_game_assets
 
 
 @dataclass(frozen=True)

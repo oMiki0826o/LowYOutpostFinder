@@ -18,9 +18,9 @@ import sys
 import tempfile
 import time
 
-from finder import (OUTPOST, CANDIDATE_FIELDS, is_candidate_start, pass_legacy_frequency,
+from .cli import (OUTPOST, CANDIDATE_FIELDS, is_candidate_start, pass_legacy_frequency,
                     pass_village_exclusion, region_position, signed_seed, write_csv)
-from versions import check_version
+from .versions import check_version
 
 WORLD_EDGE = 29_999_984
 MAX_TOP = 10000
@@ -418,8 +418,8 @@ def run_command(args) -> None:
                      args.z_min, args.z_max, args.center_x, args.center_z,
                      args.top, args.batch_regions, args.cpu_rest_ms, args.engine)
     if args.game_jar:
-        from game_archive import require_matching_game_version
-        from placement_assets import validate_placement_assets
+        from .game_archive import require_matching_game_version
+        from .placement_assets import validate_placement_assets
         require_matching_game_version(args.game_jar, args.version)
         validate_placement_assets(args.game_jar)
 
@@ -444,7 +444,7 @@ def run_command(args) -> None:
 
 
 def add_command(commands) -> None:
-    from versions import SUPPORTED
+    from .versions import SUPPORTED
     a = commands.add_parser('full-map', help='No-chunk-generation, bounded-memory, resumable whole-world placement scan (NO Y)')
     a.add_argument('--version', choices=sorted(SUPPORTED), default='1.21.8')
     a.add_argument('--seed', type=signed_seed, required=True)

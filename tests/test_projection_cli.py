@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-import finder
+import lowy_outpost_finder.cli as finder
 from test_start_geometry import sample_jar
 
 class EstimateGeometryCommandTests(unittest.TestCase):
@@ -17,7 +17,7 @@ class EstimateGeometryCommandTests(unittest.TestCase):
             opts = argparse.Namespace(version='1.21.8', seed=123, radius=8192, max_y=64,
                                       top=25, approx_biome=False, core_archive=Path(td)/'core.tar.gz',
                                       game_jar=jar, out=Path(td)/'result.csv')
-            with patch('finder.subprocess.run') as run, patch('pathlib.Path.is_file', return_value=True):
+            with patch('lowy_outpost_finder.cli.subprocess.run') as run, patch('pathlib.Path.is_file', return_value=True):
                 finder.run_estimate(opts)
             argv = run.call_args.args[0]
             self.assertEqual(argv[argv.index('--template-width')+1], '13')

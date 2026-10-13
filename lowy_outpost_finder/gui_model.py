@@ -7,8 +7,8 @@ from dataclasses import dataclass
 import argparse
 from pathlib import Path
 
-from versions import check_version
-from i18n import tr
+from .versions import check_version
+from .i18n import tr
 
 
 @dataclass(frozen=True)
@@ -76,7 +76,7 @@ def build_arguments(req: SearchRequest, *, language: str = 'zh-TW') -> tuple[lis
     args = [req.mode, '--version', req.version, '--out', str(output)]
     env = {}
     if req.mode == 'full-map':
-        from finder import signed_seed
+        from .cli import signed_seed
         try:
             seed = signed_seed(req.seed.strip())
         except (ValueError, argparse.ArgumentTypeError) as exc:
@@ -98,7 +98,7 @@ def build_arguments(req: SearchRequest, *, language: str = 'zh-TW') -> tuple[lis
             args.append('--resume')
         return args, env
     if req.mode in ('candidates', 'estimate', 'seed-vanilla'):
-        from finder import signed_seed
+        from .cli import signed_seed
         try:
             seed = signed_seed(req.seed.strip())
         except (ValueError, argparse.ArgumentTypeError) as exc:
@@ -146,7 +146,7 @@ def build_arguments(req: SearchRequest, *, language: str = 'zh-TW') -> tuple[lis
             if req.game_jar.strip():
                 args += ['--game-jar', str(Path(req.game_jar).expanduser())]
     elif req.mode == 'seed-geometry':
-        from finder import signed_seed
+        from .cli import signed_seed
         try:
             seed = signed_seed(req.seed.strip())
         except (ValueError, argparse.ArgumentTypeError) as exc:

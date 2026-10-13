@@ -16,9 +16,9 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from test_placement_assets import add_assets
 from test_tower_geometry import make_jar
-from placement_assets import validate_placement_assets
-from start_geometry import load_outpost_assets
-from tower_geometry import load_tower_blueprint
+from lowy_outpost_finder.placement_assets import validate_placement_assets
+from lowy_outpost_finder.start_geometry import load_outpost_assets
+from lowy_outpost_finder.tower_geometry import load_tower_blueprint
 
 
 def bundle(path: Path, inner: bytes, version='1.21.8') -> Path:
@@ -47,7 +47,7 @@ class BundledAssetsTests(unittest.TestCase):
             with zipfile.ZipFile(path, 'w') as jar:
                 jar.writestr('META-INF/versions/1.21.8/server-a.jar', b'bad')
                 jar.writestr('META-INF/versions/1.21.8/server-b.jar', b'bad')
-            from game_archive import open_game_assets
+            from lowy_outpost_finder.game_archive import open_game_assets
             with self.assertRaisesRegex(ValueError, 'single|multiple|Ambiguous'):
                 with open_game_assets(path):
                     pass
@@ -55,13 +55,13 @@ class BundledAssetsTests(unittest.TestCase):
     def test_invalid_embedded_archive_is_rejected(self):
         with tempfile.TemporaryDirectory() as td:
             path = bundle(Path(td) / 'bad.jar', b'not a game archive')
-            from game_archive import open_game_assets
+            from lowy_outpost_finder.game_archive import open_game_assets
             with self.assertRaisesRegex(ValueError, 'embedded|inner'):
                 with open_game_assets(path):
                     pass
 
     def test_bundle_version_mismatch_is_rejected_for_candidate_scan(self):
-        from finder import main
+        from lowy_outpost_finder.cli import main
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             inner = root / 'inner.jar'
@@ -73,7 +73,7 @@ class BundledAssetsTests(unittest.TestCase):
                 '--radius','4096','--game-jar',str(outer),'--out',str(result)]), 2)
             self.assertFalse(result.exists())
     def test_estimator_refuses_unmatched_game_jar_before_native_work(self):
-        from finder import main
+        from lowy_outpost_finder.cli import main
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             raw = root / 'inner.jar'

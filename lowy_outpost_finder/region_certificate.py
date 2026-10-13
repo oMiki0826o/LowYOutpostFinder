@@ -13,14 +13,14 @@ import hashlib
 import json
 from pathlib import Path
 
-from finder import (FIELDS, CANDIDATE_FIELDS, WorldChunks, base_row, candidates, confirmed_world,
+from .cli import (FIELDS, CANDIDATE_FIELDS, WorldChunks, base_row, candidates, confirmed_world,
                     examine, structures_start, write_csv)
-from geometry_audit import (audit_piece, audit_tower_relation, find_base_piece,
+from .geometry_audit import (audit_piece, audit_tower_relation, find_base_piece,
                             write_json_atomic)
-from nbt import NBTError, region_filename
-from start_geometry import load_outpost_assets, projection
-from tower_geometry import load_tower_blueprint
-from versions import detect_world_version
+from .nbt import NBTError, region_filename
+from .start_geometry import load_outpost_assets, projection
+from .tower_geometry import load_tower_blueprint
+from .versions import detect_world_version
 
 AUDIT_FIELDS = (*FIELDS, 'geometry_status', 'tower_vertical_status')
 COMPLETE_STATUSES = frozenset({'absent', 'verified_tower'})
@@ -181,7 +181,7 @@ def certify_world_region(world: Path, radius: int, output: Path,
     initial_state = {path: _file_state(path) for path in related_files}
     assets, blueprint = None, None
     if game_jar is not None:
-        from game_archive import require_matching_game_version
+        from .game_archive import require_matching_game_version
         game_jar = Path(game_jar).resolve()
         require_matching_game_version(game_jar, version)
         assets = load_outpost_assets(game_jar)

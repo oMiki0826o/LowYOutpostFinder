@@ -12,7 +12,7 @@ import zipfile
 from test_bundled_assets import bundle
 from test_tower_geometry import make_jar
 from test_placement_assets import add_assets
-from finder import main
+from lowy_outpost_finder.cli import main
 
 
 class ServerAssetAuditTests(unittest.TestCase):
@@ -62,19 +62,19 @@ class ServerAssetAuditTests(unittest.TestCase):
                                    '--server-jar',str(jar)]), 2)
 
     def test_official_263_data_version_must_match_world(self):
-        from versions import detect_world_version
+        from lowy_outpost_finder.versions import detect_world_version
         self.assertEqual(detect_world_version({'DataVersion': 5023, 'Version': {'Name': '26.3'}}), ('26.3', 5023))
         with self.assertRaisesRegex(ValueError, 'DataVersion'):
             detect_world_version({'DataVersion': 4999, 'Version': {'Name': '26.3'}})
 
     def test_java_runtime_requirement_detected_before_server_launch(self):
-        from vanilla_oracle import ensure_compatible_java
-        with patch('vanilla_oracle.subprocess.run', return_value=
+        from lowy_outpost_finder.vanilla_oracle import ensure_compatible_java
+        with patch('lowy_outpost_finder.vanilla_oracle.subprocess.run', return_value=
                    SimpleNamespace(returncode=0, stdout='', stderr='openjdk version \"21.0.5\"')):
             with self.assertRaisesRegex(ValueError, 'Java 25'):
                 ensure_compatible_java('java', {'java_version':25})
             self.assertEqual(ensure_compatible_java('java', {'java_version':21}), 21)
-        with patch('vanilla_oracle.subprocess.run', return_value=
+        with patch('lowy_outpost_finder.vanilla_oracle.subprocess.run', return_value=
                    SimpleNamespace(returncode=0, stdout='', stderr='openjdk version \"17.0.9\"')):
             with self.assertRaisesRegex(ValueError, 'Java 21'):
                 ensure_compatible_java('java', {'java_version':21})

@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from noise_witness import build_witnesses, compare_witnesses, read_witnesses
+from lowy_outpost_finder.noise_witness import build_witnesses, compare_witnesses, read_witnesses
 
 
 class WitnessTests(unittest.TestCase):

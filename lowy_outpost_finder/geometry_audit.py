@@ -14,12 +14,12 @@ from pathlib import Path
 import os
 import tempfile
 
-from finder import (WorldChunks, confirmed_world, examine, load_candidates,
+from .cli import (WorldChunks, confirmed_world, examine, load_candidates,
                     pool_locations, structures_start, write_csv)
-from nbt import NBTError
-from start_geometry import StartProjection, load_outpost_assets, projection
-from tower_geometry import TowerBlueprint, TowerGeometryError, load_tower_blueprint
-from versions import detect_world_version
+from .nbt import NBTError
+from .start_geometry import StartProjection, load_outpost_assets, projection
+from .tower_geometry import TowerBlueprint, TowerGeometryError, load_tower_blueprint
+from .versions import detect_world_version
 
 ROTATION_NAMES = ('none', 'clockwise_90', 'clockwise_180', 'counterclockwise_90')
 FIELDS = ('version', 'seed', 'chunk_x', 'chunk_z', 'status', 'geometry_status',
@@ -179,7 +179,7 @@ def audit_world(world: Path, candidate_csv: Path, game_jar: Path,
     meta, seed = confirmed_world(Path(world))
     version, dv = detect_world_version(meta)
     selection = load_candidates(Path(candidate_csv), seed, version)
-    from game_archive import require_matching_game_version
+    from .game_archive import require_matching_game_version
     require_matching_game_version(Path(game_jar), version)
     assets = load_outpost_assets(Path(game_jar))
     estimates = load_estimates(Path(estimate_csv), seed, version) if estimate_csv else {}

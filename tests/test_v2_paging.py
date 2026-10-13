@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
-from finder import candidates, main
+from lowy_outpost_finder.cli import candidates, main
 
 class PagingTests(unittest.TestCase):
     def test_offset_creates_page_candidates_and_no_false_nearest_proof(self):
@@ -19,9 +19,9 @@ class PagingTests(unittest.TestCase):
                 self.assertEqual([(int(r['chunk_x']),int(r['chunk_z'])) for r in rows],
                          [(r['chunk_x'],r['chunk_z']) for r in all_candidates[3:5]])
                 return [{'status':'absent'}, {'status':'absent'}]
-            with patch('finder.confirmed_world',return_value=({'DataVersion':4440},123)), \
-                 patch('finder.detect_world_version',return_value=('1.21.8',4440)), \
-                 patch('live.run_live',side_effect=fake_live):
+            with patch('lowy_outpost_finder.cli.confirmed_world',return_value=({'DataVersion':4440},123)), \
+                 patch('lowy_outpost_finder.cli.detect_world_version',return_value=('1.21.8',4440)), \
+                 patch('lowy_outpost_finder.live.run_live',side_effect=fake_live):
                 self.assertEqual(main(['search-live','--world',td,'--radius','8192','--offset','3',
                                       '--limit','2','--out',str(out),'--summary',str(summary)]),0)
             report=json.loads(summary.read_text())

@@ -2,7 +2,7 @@
 Modification: 2026-10-13 — regression for official Java 26.1.2 hotfix version.
 """
 import unittest
-from versions import SUPPORTED, check_version
+from lowy_outpost_finder.versions import SUPPORTED, check_version
 
 
 class Version2612Tests(unittest.TestCase):

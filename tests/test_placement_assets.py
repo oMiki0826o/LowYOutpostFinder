@@ -10,8 +10,8 @@ import zipfile
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from placement_assets import validate_placement_assets
-from finder import main
+from lowy_outpost_finder.placement_assets import validate_placement_assets
+from lowy_outpost_finder.cli import main
 from test_start_geometry import sample_jar
 
 

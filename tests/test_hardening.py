@@ -15,8 +15,8 @@ import zlib
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import finder
-from nbt import NBTError, MAX_NBT_BYTES, Region, load_level
+import lowy_outpost_finder.cli as finder
+from lowy_outpost_finder.nbt import NBTError, MAX_NBT_BYTES, Region, load_level
 from test_finder import generated_world
 
 
@@ -100,15 +100,15 @@ class BoundaryTests(unittest.TestCase):
 
     def test_live_restores_signal_handler(self):
         import signal
-        import live
+        import lowy_outpost_finder.live as live
         old = signal.getsignal(signal.SIGTERM)
-        with patch('live._run_live', return_value=[]):
+        with patch('lowy_outpost_finder.live._run_live', return_value=[]):
             live.run_live(object())
         self.assertIs(signal.getsignal(signal.SIGTERM), old)
 
 class LiveLimitTests(unittest.TestCase):
     def test_live_overlarge_limit_blocked_before_candidate_search(self):
-        from gui_model import SearchRequest, build_arguments
+        from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
         req = SearchRequest(mode='search-live', version='auto', world='test-world',
                             password='example', limit='257', out='hits.csv')
         with self.assertRaisesRegex(ValueError, '256'):
@@ -132,7 +132,7 @@ class TerrainPriorityTests(unittest.TestCase):
                 loaded = finder.load_candidates(args.candidates, 123, '1.21.8')
                 self.assertEqual(loaded, [(123, one['chunk_x'], one['chunk_z'])])
                 return []
-            with patch('finder.subprocess.run', side_effect=native_run), patch('live.run_live', side_effect=live_read):
+            with patch('lowy_outpost_finder.cli.subprocess.run', side_effect=native_run), patch('lowy_outpost_finder.live.run_live', side_effect=live_read):
                 finder.run_search_live(args)
             self.assertTrue(args.out.exists())
 

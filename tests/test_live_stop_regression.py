@@ -10,8 +10,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from finder import candidates, base_row
-from live import run_live
+from lowy_outpost_finder.cli import candidates, base_row
+from lowy_outpost_finder.live import run_live
 
 
 class ExistingSave:
@@ -57,13 +57,13 @@ class LiveStopRegressionTests(unittest.TestCase):
                    candidates=Path(td)/'points.csv', limit=2, timeout=10,
                    port=25575, out=Path(td)/'audit.csv')
             with patch.dict(os.environ, {'LOWY_STOP_TEST':'fake'}), \
-                 patch('live.confirmed_world', return_value=({'DataVersion':4440},123)), \
-                 patch('versions.detect_world_version', return_value=('1.21.8',4440)), \
-                 patch('live.load_candidates', return_value=[(123,p['chunk_x'],p['chunk_z']) for p in selected]), \
-                 patch('live.is_candidate_start', return_value=True), \
-                 patch('live.WorldChunks', ExistingSave), \
-                 patch('live.RCON', FakeServer), \
-                 patch('live.examine', side_effect=lambda chunk,seed,cx,cz,**kw: responses[(cx,cz)]):
+                 patch('lowy_outpost_finder.live.confirmed_world', return_value=({'DataVersion':4440},123)), \
+                 patch('lowy_outpost_finder.versions.detect_world_version', return_value=('1.21.8',4440)), \
+                 patch('lowy_outpost_finder.live.load_candidates', return_value=[(123,p['chunk_x'],p['chunk_z']) for p in selected]), \
+                 patch('lowy_outpost_finder.live.is_candidate_start', return_value=True), \
+                 patch('lowy_outpost_finder.live.WorldChunks', ExistingSave), \
+                 patch('lowy_outpost_finder.live.RCON', FakeServer), \
+                 patch('lowy_outpost_finder.live.examine', side_effect=lambda chunk,seed,cx,cz,**kw: responses[(cx,cz)]):
                 returned = run_live(args)
             self.assertEqual([(r['chunk_x'],r['chunk_z']) for r in returned],
                              [(p['chunk_x'],p['chunk_z']) for p in selected])
@@ -88,13 +88,13 @@ class LiveStopRegressionTests(unittest.TestCase):
                        timeout=10, port=25575, out=out,
                        stop_center_y_below=-37, stop_max_y=0)
             with patch.dict(os.environ, {'LOWY_STOP_TEST':'fake'}), \
-                 patch('live.confirmed_world', return_value=({'DataVersion':4440},123)), \
-                 patch('versions.detect_world_version', return_value=('1.21.8',4440)), \
-                 patch('live.load_candidates', return_value=[(123,c['chunk_x'],c['chunk_z']) for c in selected]), \
-                 patch('live.is_candidate_start', return_value=True), \
-                 patch('live.WorldChunks',ExistingSave), \
-                 patch('live.RCON',FakeServer), \
-                 patch('live.examine',side_effect=lambda _chunk, _seed,cx,cz,**kw: lookup[(cx,cz)]):
+                 patch('lowy_outpost_finder.live.confirmed_world', return_value=({'DataVersion':4440},123)), \
+                 patch('lowy_outpost_finder.versions.detect_world_version', return_value=('1.21.8',4440)), \
+                 patch('lowy_outpost_finder.live.load_candidates', return_value=[(123,c['chunk_x'],c['chunk_z']) for c in selected]), \
+                 patch('lowy_outpost_finder.live.is_candidate_start', return_value=True), \
+                 patch('lowy_outpost_finder.live.WorldChunks',ExistingSave), \
+                 patch('lowy_outpost_finder.live.RCON',FakeServer), \
+                 patch('lowy_outpost_finder.live.examine',side_effect=lambda _chunk, _seed,cx,cz,**kw: lookup[(cx,cz)]):
                  rows=run_live(args)
             self.assertEqual(len(rows),2)
             self.assertEqual(rows[0]['base_plate_y'],12)

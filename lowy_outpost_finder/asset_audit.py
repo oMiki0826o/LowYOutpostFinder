@@ -7,11 +7,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from game_archive import open_game_assets, require_matching_game_version
-from biome_assets import expand_biome_tag
-from placement_assets import validate_placement_assets
-from start_geometry import load_outpost_assets
-from tower_geometry import load_tower_blueprint
+from .game_archive import open_game_assets, require_matching_game_version
+from .biome_assets import expand_biome_tag
+from .placement_assets import validate_placement_assets
+from .start_geometry import load_outpost_assets
+from .tower_geometry import load_tower_blueprint
 
 BIOME_TAG = 'data/minecraft/tags/worldgen/biome/has_structure/pillager_outpost.json'
 
@@ -60,7 +60,7 @@ def audit_assets(server_jar: Path, version: str) -> dict:
 
 
 def run_assets_audit(args) -> None:
-    from geometry_audit import write_json_atomic
+    from .geometry_audit import write_json_atomic
     report = audit_assets(args.server_jar, args.version)
     if args.out:
         write_json_atomic(args.out, report)
@@ -69,7 +69,7 @@ def run_assets_audit(args) -> None:
 
 
 def add_command(commands) -> None:
-    from versions import SUPPORTED
+    from .versions import SUPPORTED
     from pathlib import Path
     parser = commands.add_parser('assets-audit', help='Inspect matching-version original JAR assets; no world generation')
     parser.add_argument('--version', choices=sorted(SUPPORTED), required=True)

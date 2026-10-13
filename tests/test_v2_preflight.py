@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import tempfile
 import unittest
 from unittest.mock import patch
-from finder import main
+from lowy_outpost_finder.cli import main
 from test_bundled_assets import bundle
 from test_tower_geometry import make_jar
 from test_placement_assets import add_assets
@@ -18,7 +18,7 @@ class PreflightTests(unittest.TestCase):
             root=Path(td);inner=root/'inner.jar';make_jar(inner);add_assets(inner)
             jar=bundle(root/'server.jar',inner.read_bytes())
             out=root/'check.json'
-            with patch('vanilla_oracle.subprocess.run',return_value=SimpleNamespace(
+            with patch('lowy_outpost_finder.vanilla_oracle.subprocess.run',return_value=SimpleNamespace(
                        returncode=0,stdout='',stderr='openjdk version "21.0.3"')):
                 self.assertEqual(main(['server-check','--version','1.21.8',
                      '--server-jar',str(jar),'--java','java','--out',str(out)]),0)

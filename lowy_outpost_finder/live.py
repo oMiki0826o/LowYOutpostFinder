@@ -17,7 +17,7 @@ import struct
 import sys
 import time
 
-from finder import FIELDS, WorldChunks, confirmed_world, examine, is_candidate_start, load_candidates, write_csv
+from .cli import FIELDS, WorldChunks, confirmed_world, examine, is_candidate_start, load_candidates, write_csv
 
 
 class RCONError(RuntimeError):
@@ -125,7 +125,7 @@ def _run_live(args):
         raise ValueError('Remote RCON transmits passwords without encryption. Use a local connection or a secured tunnel.')
     _info, seed = confirmed_world(args.world, getattr(args, 'version', 'auto'))
     data_version = _info['DataVersion']
-    from versions import detect_world_version
+    from .versions import detect_world_version
     version_name, _ = detect_world_version(_info)
     selection = load_candidates(args.candidates, seed, version_name)
     for _, cx, cz in selection[:args.limit]:
@@ -133,7 +133,7 @@ def _run_live(args):
             raise ValueError(f'CSV contains a non-candidate start at chunk {cx},{cz}; refusing to generate')
     if not 1 <= args.limit <= 256 or args.timeout < 5:
         raise ValueError('--limit must be between 1 and 256 and --timeout >= 5')
-    from search_conditions import accepted_tower
+    from .search_conditions import accepted_tower
     checkpoint = getattr(args, 'checkpoint', None)
     check_checkpoint_path(checkpoint, args.out)
     out = []
@@ -221,7 +221,7 @@ def _run_live(args):
 
 def add_live_command(commands):
     a = commands.add_parser('live', help='對執行中的同版 vanilla 伺服器進行生成與存檔核驗')
-    from versions import SUPPORTED
+    from .versions import SUPPORTED
     a.add_argument('--version', choices=['auto', *sorted(SUPPORTED)], default='auto')
     a.add_argument('--world', type=Path, required=True)
     a.add_argument('--candidates', type=Path, required=True)

@@ -22,8 +22,8 @@ import tempfile
 import time
 import zipfile
 
-from versions import check_version
-from game_archive import declared_game_version
+from .versions import check_version
+from .game_archive import declared_game_version
 
 
 class VanillaStartupError(RuntimeError):
@@ -149,7 +149,7 @@ def _stop_server(process: subprocess.Popen, port: int, password: str) -> None:
     if process.poll() is not None:
         return
     try:
-        from live import RCON
+        from .live import RCON
         with RCON('127.0.0.1', port, password) as server:
             server.command('stop')
     except (OSError, RuntimeError, ValueError):
@@ -190,7 +190,7 @@ def run_vanilla(args) -> None:
     """
     if not args.eula_accepted:
         raise ValueError('Minecraft EULA acceptance is required (explicit --eula-accepted)')
-    from finder import validate_report_paths
+    from .cli import validate_report_paths
     validate_report_paths(out=args.out, audit=getattr(args, 'audit', None),
                           checkpoint=getattr(args, 'checkpoint', None),
                           summary=getattr(args, 'summary', None))
@@ -208,7 +208,7 @@ def run_vanilla(args) -> None:
         raise ValueError('Terrain priority is experimental and only supported for 1.21.8')
     jar = Path(args.server_jar).expanduser().resolve(strict=True)
     verify_bundle(jar, args.version)
-    from finder import candidates, run_search_live
+    from .cli import candidates, run_search_live
     # Validate search size before any world generation or output modification.
     if next(candidates(args.seed, args.radius,
                        center_x=getattr(args, 'center_x', 0),
@@ -275,8 +275,8 @@ def run_vanilla(args) -> None:
 
 
 def add_vanilla_command(commands) -> None:
-    from finder import signed_seed
-    from versions import SUPPORTED
+    from .cli import signed_seed
+    from .versions import SUPPORTED
     parser = commands.add_parser('seed-vanilla', help='從種子建立暫存原版世界、生成區塊，再讀取實際結構 Y；非免生成模擬')
     parser.add_argument('--version', choices=sorted(SUPPORTED), required=True)
     parser.add_argument('--seed', type=signed_seed, required=True)
@@ -292,7 +292,7 @@ def add_vanilla_command(commands) -> None:
     parser.add_argument('--java', default='java', help='已安裝的 Java 執行檔')
     parser.add_argument('--eula-accepted', action='store_true', help='必須自行閱讀並明確同意 Minecraft EULA')
     parser.add_argument('--max-y', type=int)
-    from finder import finite_y
+    from .cli import finite_y
     parser.add_argument('--center-y-below', type=finite_y, default=-37,
                         help='要求完整結構中心 Y 嚴格低於此值')
     parser.add_argument('--audit', type=Path, help='保留所有候選的檢查紀錄（含未生成／無結構）')

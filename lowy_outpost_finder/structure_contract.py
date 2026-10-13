@@ -11,11 +11,11 @@ import json
 from pathlib import Path
 from collections import Counter
 
-from game_archive import open_game_assets, require_matching_game_version
-from tower_geometry import _read_nbt
-from geometry_audit import write_json_atomic
-from versions import check_version
-from worldgen_contract import _read_json, BASE
+from .game_archive import open_game_assets, require_matching_game_version
+from .tower_geometry import _read_nbt
+from .geometry_audit import write_json_atomic
+from .versions import check_version
+from .worldgen_contract import _read_json, BASE
 
 
 def inspect_structure_contract(game_jar: Path, version: str) -> dict:
@@ -142,7 +142,7 @@ def run_contract(args) -> None:
 
 
 def add_command(commands) -> None:
-    from versions import SUPPORTED
+    from .versions import SUPPORTED
     parser = commands.add_parser('jigsaw-contract', help='核對原版前哨站所有可達的 Jigsaw 池與模板（資料驗證，不等於生成模擬）')
     parser.add_argument('--version', required=True, choices=sorted(SUPPORTED))
     parser.add_argument('--game-jar', required=True, type=Path)

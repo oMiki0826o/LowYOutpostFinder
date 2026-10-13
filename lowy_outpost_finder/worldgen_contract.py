@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 import zipfile
 
-from game_archive import open_game_assets, require_matching_game_version
-from geometry_audit import write_json_atomic
-from versions import check_version
+from .game_archive import open_game_assets, require_matching_game_version
+from .geometry_audit import write_json_atomic
+from .versions import check_version
 
 BASE = 'data/minecraft/worldgen/'
 MAX_JSON = 2 * 1024 * 1024
@@ -121,7 +121,7 @@ def run_contract(args) -> None:
 
 
 def add_command(commands) -> None:
-    from versions import SUPPORTED
+    from .versions import SUPPORTED
     parser = commands.add_parser('worldgen-contract', help='核對原版 Noise Router、密度函數與噪聲參數相依；非精確高度搜尋')
     parser.add_argument('--version', required=True, choices=sorted(SUPPORTED))
     parser.add_argument('--game-jar', required=True, type=Path)

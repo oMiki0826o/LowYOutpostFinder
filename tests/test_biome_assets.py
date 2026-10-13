@@ -11,7 +11,7 @@ import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from biome_assets import expand_biome_tag
+from lowy_outpost_finder.biome_assets import expand_biome_tag
 
 
 class BiomeAssetTests(unittest.TestCase):

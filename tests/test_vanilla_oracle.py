@@ -14,7 +14,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from gui_model import SearchRequest, build_arguments
+from lowy_outpost_finder.gui_model import SearchRequest, build_arguments
 
 
 class VanillaOracleTests(unittest.TestCase):
@@ -25,20 +25,20 @@ class VanillaOracleTests(unittest.TestCase):
         return jar
 
     def test_requires_explicit_eula_before_execution(self):
-        from vanilla_oracle import run_vanilla
+        from lowy_outpost_finder.vanilla_oracle import run_vanilla
         with tempfile.TemporaryDirectory() as directory:
             jar = self.make_bundle(directory)
             args = SimpleNamespace(eula_accepted=False, server_jar=jar, version='1.21.8',
                                    seed=123, radius=1024, limit=1, timeout=10,
                                    startup_timeout=60, java='java', memory=2048,
                                    max_y=0, out=Path(directory) / 'result.csv')
-            with patch('vanilla_oracle.subprocess.Popen') as popen:
+            with patch('lowy_outpost_finder.vanilla_oracle.subprocess.Popen') as popen:
                 with self.assertRaisesRegex(ValueError, 'EULA'):
                     run_vanilla(args)
                 popen.assert_not_called()
 
     def test_rejects_wrong_version_and_unverifiable_jars(self):
-        from vanilla_oracle import verify_bundle
+        from lowy_outpost_finder.vanilla_oracle import verify_bundle
         with tempfile.TemporaryDirectory() as directory:
             jar = self.make_bundle(directory, '1.21.8')
             self.assertEqual(verify_bundle(jar, '1.21.8'), '1.21.8')
@@ -54,7 +54,7 @@ class VanillaOracleTests(unittest.TestCase):
                 verify_bundle(bad, '1.21.8')
 
     def test_server_properties_loopback_only(self):
-        from vanilla_oracle import server_properties
+        from lowy_outpost_finder.vanilla_oracle import server_properties
         result = server_properties(-10, 'A-secret', 25566, 25577)
         for line in ('level-seed=-10', 'server-ip=127.0.0.1',
                      'rcon.port=25577', 'server-port=25566',
@@ -78,7 +78,7 @@ class VanillaOracleTests(unittest.TestCase):
             self.assertEqual(env, {})
 
     def test_finder_has_seed_vanilla_command_and_validates_eula(self):
-        import finder
+        import lowy_outpost_finder.cli as finder
         with tempfile.TemporaryDirectory() as directory:
             jar = self.make_bundle(directory)
             command = ['seed-vanilla', '--version', '1.21.8', '--seed', '0',
@@ -88,30 +88,30 @@ class VanillaOracleTests(unittest.TestCase):
             self.assertFalse((Path(directory) / 'results.csv').exists())
 
     def test_no_candidate_prevents_pointless_server_launch(self):
-        from vanilla_oracle import run_vanilla
+        from lowy_outpost_finder.vanilla_oracle import run_vanilla
         with tempfile.TemporaryDirectory() as directory:
             jar = self.make_bundle(directory)
             args = SimpleNamespace(eula_accepted=True, server_jar=jar, version='1.21.8',
                                    seed=123, radius=0, limit=1, timeout=10,
                                    startup_timeout=60, java='java', memory=2048,
                                    max_y=0, out=Path(directory) / 'result.csv', audit=None)
-            with patch('vanilla_oracle.subprocess.Popen') as popen:
+            with patch('lowy_outpost_finder.vanilla_oracle.subprocess.Popen') as popen:
                 with self.assertRaisesRegex(ValueError, 'No placement candidates'):
                     run_vanilla(args)
                 popen.assert_not_called()
 
     def test_server_startup_failure_stops_process_and_cleans_world(self):
-        from vanilla_oracle import run_vanilla, VanillaStartupError
+        from lowy_outpost_finder.vanilla_oracle import run_vanilla, VanillaStartupError
         with tempfile.TemporaryDirectory() as directory:
             jar = self.make_bundle(directory)
             args = SimpleNamespace(eula_accepted=True, server_jar=jar, version='1.21.8',
                                    seed=123, radius=8192, limit=1, timeout=10,
                                    startup_timeout=60, java='java', memory=2048,
                                    max_y=0, out=Path(directory) / 'result.csv', audit=None)
-            with patch('vanilla_oracle.subprocess.Popen') as popen, \
-                 patch('vanilla_oracle.ensure_compatible_java', return_value=21), \
-                 patch('vanilla_oracle._wait_ready', side_effect=VanillaStartupError('failed')), \
-                 patch('vanilla_oracle._stop_server') as stop:
+            with patch('lowy_outpost_finder.vanilla_oracle.subprocess.Popen') as popen, \
+                 patch('lowy_outpost_finder.vanilla_oracle.ensure_compatible_java', return_value=21), \
+                 patch('lowy_outpost_finder.vanilla_oracle._wait_ready', side_effect=VanillaStartupError('failed')), \
+                 patch('lowy_outpost_finder.vanilla_oracle._stop_server') as stop:
                 process = popen.return_value
                 with self.assertRaisesRegex(VanillaStartupError, 'failed'):
                     run_vanilla(args)
@@ -121,8 +121,8 @@ class VanillaOracleTests(unittest.TestCase):
                 self.assertFalse(Path(popen.call_args.kwargs['cwd']).exists())
 
     def test_managed_run_hands_off_isolated_world_and_purges_password(self):
-        from vanilla_oracle import run_vanilla
-        from finder import FIELDS, write_csv
+        from lowy_outpost_finder.vanilla_oracle import run_vanilla
+        from lowy_outpost_finder.cli import FIELDS, write_csv
         import os
         with tempfile.TemporaryDirectory() as directory:
             jar = self.make_bundle(directory)
@@ -140,11 +140,11 @@ class VanillaOracleTests(unittest.TestCase):
                 write_csv(options.audit, [{'status': 'absent'}], FIELDS)
                 write_csv(options.out, [], FIELDS)
             before = os.environ.get('LOWYOUTPOST_TEMP_RCON')
-            with patch('vanilla_oracle.subprocess.Popen'), \
-                 patch('vanilla_oracle.ensure_compatible_java', return_value=21), \
-                 patch('vanilla_oracle._wait_ready'), \
-                 patch('vanilla_oracle._stop_server') as stop, \
-                 patch('finder.run_search_live', side_effect=fake_live):
+            with patch('lowy_outpost_finder.vanilla_oracle.subprocess.Popen'), \
+                 patch('lowy_outpost_finder.vanilla_oracle.ensure_compatible_java', return_value=21), \
+                 patch('lowy_outpost_finder.vanilla_oracle._wait_ready'), \
+                 patch('lowy_outpost_finder.vanilla_oracle._stop_server') as stop, \
+                 patch('lowy_outpost_finder.cli.run_search_live', side_effect=fake_live):
                 run_vanilla(args)
                 stop.assert_called_once()
             self.assertTrue(out.exists())
@@ -153,7 +153,7 @@ class VanillaOracleTests(unittest.TestCase):
             self.assertEqual(os.environ.get('LOWYOUTPOST_TEMP_RCON'), before)
 
     def test_pending_validation_does_not_claim_zero_eligible_outposts(self):
-        from vanilla_oracle import classify_run
+        from lowy_outpost_finder.vanilla_oracle import classify_run
         self.assertEqual(classify_run(['absent', 'not_full'])['confidence'], 'incomplete')
         self.assertEqual(classify_run(['absent'])['confidence'], 'no_confirmed_towers')
         self.assertEqual(classify_run(['verified_tower', 'absent'])['confidence'], 'partial')

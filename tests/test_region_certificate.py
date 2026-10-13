@@ -9,8 +9,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from region_certificate import summarize_region, certify_world_region
-from finder import candidates
+from lowy_outpost_finder.region_certificate import summarize_region, certify_world_region
+from lowy_outpost_finder.cli import candidates
 
 
 class RegionCertificateTests(unittest.TestCase):
@@ -95,8 +95,8 @@ class RegionCertificateTests(unittest.TestCase):
     def test_finite_certificate_requires_geometry_for_saved_towers(self):
         # Even a FULL chunk with a watchtower is not certified until its
         # actual baseplate footprint/rotation is checked against version assets.
-        from finder import candidates
-        import region_certificate
+        from lowy_outpost_finder.cli import candidates
+        import lowy_outpost_finder.region_certificate as region_certificate
         from unittest.mock import patch
         with tempfile.TemporaryDirectory() as td:
             chunk = {'DataVersion': 4440, 'Status': 'minecraft:full',
@@ -116,17 +116,17 @@ class RegionCertificateTests(unittest.TestCase):
                     return chunk
                 return {'DataVersion': 4440, 'Status': 'minecraft:full',
                         'xPos': cx, 'zPos': cz, 'structures': {'starts': {}}}
-            with patch('region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
-                 patch('region_certificate.detect_world_version', return_value=(self.version, 4440)), \
-                 patch('region_certificate.WorldChunks.get', fake_get):
+            with patch('lowy_outpost_finder.region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
+                 patch('lowy_outpost_finder.region_certificate.detect_world_version', return_value=(self.version, 4440)), \
+                 patch('lowy_outpost_finder.region_certificate.WorldChunks.get', fake_get):
                 report = region_certificate.certify_world_region(Path(td), 8192, Path(td) / 'out.json')
             self.assertFalse(report['coverage_complete'])
             self.assertEqual(report['incomplete_count'], 1)
             self.assertIsNone(report['lowest_confirmed_base_plate_y'])
 
     def test_rejects_world_modified_during_read(self):
-        import region_certificate
-        from nbt import region_filename
+        import lowy_outpost_finder.region_certificate as region_certificate
+        from lowy_outpost_finder.nbt import region_filename
         with tempfile.TemporaryDirectory() as td:
             world = Path(td)
             position = self.first
@@ -139,28 +139,28 @@ class RegionCertificateTests(unittest.TestCase):
                 return {'DataVersion': 4440, 'Status': 'minecraft:full',
                         'xPos': cx, 'zPos': cz, 'structures': {'starts': {}}}
             out = world / 'report.json'
-            with patch('region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
-                 patch('region_certificate.detect_world_version', return_value=(self.version, 4440)), \
-                 patch('region_certificate.WorldChunks.get', fake_get):
+            with patch('lowy_outpost_finder.region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
+                 patch('lowy_outpost_finder.region_certificate.detect_world_version', return_value=(self.version, 4440)), \
+                 patch('lowy_outpost_finder.region_certificate.WorldChunks.get', fake_get):
                 with self.assertRaisesRegex(RuntimeError, 'changed during'):
                     region_certificate.certify_world_region(world, 8192, out)
             self.assertFalse(out.exists())
 
     def test_never_overwrites_minecraft_world_files(self):
-        from region_certificate import certify_world_region
+        from lowy_outpost_finder.region_certificate import certify_world_region
         with tempfile.TemporaryDirectory() as td:
             world = Path(td)
             level = world / 'level.dat'
             level.write_bytes(b'untouched original')
-            with patch('region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
-                 patch('region_certificate.detect_world_version', return_value=(self.version, 4440)):
+            with patch('lowy_outpost_finder.region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
+                 patch('lowy_outpost_finder.region_certificate.detect_world_version', return_value=(self.version, 4440)):
                 with self.assertRaisesRegex(ValueError, 'world data'):
                     certify_world_region(world, 8192, level)
             self.assertEqual(level.read_bytes(), b'untouched original')
 
     def test_pending_candidates_file_contains_only_not_yet_full_origins(self):
         import csv
-        from region_certificate import certify_world_region
+        from lowy_outpost_finder.region_certificate import certify_world_region
         with tempfile.TemporaryDirectory() as td:
             world = Path(td)
             output = world / 'report.json'
@@ -171,9 +171,9 @@ class RegionCertificateTests(unittest.TestCase):
                     return None
                 return {'DataVersion': 4440, 'Status': 'minecraft:full',
                         'xPos': cx, 'zPos': cz, 'structures': {'starts': {}}}
-            with patch('region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
-                 patch('region_certificate.detect_world_version', return_value=(self.version, 4440)), \
-                 patch('region_certificate.WorldChunks.get', fake_get):
+            with patch('lowy_outpost_finder.region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
+                 patch('lowy_outpost_finder.region_certificate.detect_world_version', return_value=(self.version, 4440)), \
+                 patch('lowy_outpost_finder.region_certificate.WorldChunks.get', fake_get):
                 report = certify_world_region(world, 8192, output, pending_output=pending)
             self.assertFalse(report['coverage_complete'])
             with pending.open(encoding='utf-8', newline='') as fp:
@@ -184,7 +184,7 @@ class RegionCertificateTests(unittest.TestCase):
             self.assertEqual(queued[0]['classification'], 'placement_candidate')
 
     def test_real_command_uses_world_snapshot_without_making_fake_world(self):
-        from finder import FIELDS
+        from lowy_outpost_finder.cli import FIELDS
         with tempfile.TemporaryDirectory() as td:
             out = Path(td) / 'report.json'
             rows_out = Path(td) / 'audit.csv'
@@ -195,9 +195,9 @@ class RegionCertificateTests(unittest.TestCase):
                         'xPos': cx, 'zPos': cz, 'structures': {'starts': {}}}
             radius = 8192
             expected = list(candidates(self.seed, radius))
-            with patch('region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
-                 patch('region_certificate.detect_world_version', return_value=(self.version, 4440)), \
-                 patch('region_certificate.WorldChunks.get', fake_get):
+            with patch('lowy_outpost_finder.region_certificate.confirmed_world', return_value=({'DataVersion': 4440}, self.seed)), \
+                 patch('lowy_outpost_finder.region_certificate.detect_world_version', return_value=(self.version, 4440)), \
+                 patch('lowy_outpost_finder.region_certificate.WorldChunks.get', fake_get):
                 result = certify_world_region(Path(td), radius, out, rows_out, max_candidates=1000)
             self.assertTrue(result['coverage_complete'])
             self.assertEqual(len(observed), len(expected))

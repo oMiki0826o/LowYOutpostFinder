@@ -9,11 +9,11 @@ import hashlib
 import json
 from pathlib import Path
 
-from game_archive import declared_game_version
-from geometry_audit import write_json_atomic
-from placement_assets import validate_placement_assets
-from vanilla_oracle import ensure_compatible_java, verify_bundle
-from versions import SUPPORTED
+from .game_archive import declared_game_version
+from .geometry_audit import write_json_atomic
+from .placement_assets import validate_placement_assets
+from .vanilla_oracle import ensure_compatible_java, verify_bundle
+from .versions import SUPPORTED
 
 
 def preflight(jar: Path, version: str, java: str) -> dict:

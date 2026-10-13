@@ -13,7 +13,7 @@ import sys
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from start_geometry import projection, load_outpost_assets, geometry_for_rotation
+from lowy_outpost_finder.start_geometry import projection, load_outpost_assets, geometry_for_rotation
 
 
 def nbt_size(x, y, z):

@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from finder import candidates, signed_seed, write_csv
-from game_archive import require_matching_game_version
-from placement_assets import validate_placement_assets
-from start_geometry import load_outpost_assets, projection
-from versions import check_version, SUPPORTED
+from .cli import candidates, signed_seed, write_csv
+from .game_archive import require_matching_game_version
+from .placement_assets import validate_placement_assets
+from .start_geometry import load_outpost_assets, projection
+from .versions import check_version, SUPPORTED
 
 GEOMETRY_FIELDS = ('version', 'seed', 'chunk_x', 'chunk_z', 'x', 'z',
                    'rotation', 'sample_x', 'sample_z', 'template_sha256', 'classification')

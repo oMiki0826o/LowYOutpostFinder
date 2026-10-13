@@ -8,7 +8,7 @@ import tempfile
 import unittest
 import zipfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from structure_contract import inspect_structure_contract
+from lowy_outpost_finder.structure_contract import inspect_structure_contract
 BASE='data/minecraft/worldgen/'
 
 
