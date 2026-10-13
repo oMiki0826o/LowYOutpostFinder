@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Python compile and tests
+        run: |
+          python -m compileall -q .
+          python -m unittest discover -s tests -v
+      - name: GUI smoke tests on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb xauth python3-tk
+          xvfb-run -a python -m unittest discover -s tests -p test_gui_lifecycle.py -v
+          xvfb-run -a python -m unittest discover -s tests -p test_gui_english.py -v
+          xvfb-run -a python -m unittest discover -s tests -p test_explorer_gui.py -v

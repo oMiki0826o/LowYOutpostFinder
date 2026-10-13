@@ -1,0 +1,5 @@
+# File: seeds.example.txt
+# Modification: 2026-10-12 — example decimal world seeds.
+123
+-123
+0

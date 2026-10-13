@@ -1,0 +1,47 @@
+{
+  "version": "26.3",
+  "preset": "overworld",
+  "noise_settings": {
+    "min_y": -64,
+    "height": 384,
+    "aquifers_enabled": null
+  },
+  "density_files_visited": 21,
+  "noise_files_visited": 26,
+  "density_operators": {
+    "minecraft:abs": 9,
+    "minecraft:add": 32,
+    "minecraft:beardifier": 1,
+    "minecraft:blend_alpha": 3,
+    "minecraft:blend_density": 1,
+    "minecraft:blend_offset": 1,
+    "minecraft:cache": 15,
+    "minecraft:clamp": 6,
+    "minecraft:cube": 2,
+    "minecraft:div": 1,
+    "minecraft:find_top_surface": 1,
+    "minecraft:gradient": 8,
+    "minecraft:half_negative": 1,
+    "minecraft:interpolated": 6,
+    "minecraft:interval_select": 3,
+    "minecraft:lerp": 7,
+    "minecraft:max": 4,
+    "minecraft:min": 5,
+    "minecraft:mul": 36,
+    "minecraft:noise": 37,
+    "minecraft:old_blended_noise": 1,
+    "minecraft:quarter_negative": 2,
+    "minecraft:range_choice": 7,
+    "minecraft:spline": 3,
+    "minecraft:square": 1,
+    "minecraft:squeeze": 1,
+    "minecraft:sub": 1
+  },
+  "sha256": {
+    "worldgen_settings": "d093895d50edd79d53555b33b62d767115399764e32a4f9ae2687739f785d4b9",
+    "transitive_dependencies": "08862797233d4a1577fef428fa7ab1b3bd4d2268f4e3199246d2e37513b4eeca"
+  },
+  "seed_equivalence_proven": false,
+  "status": "resource_graph_verified_only",
+  "limitations": "Resource/reference integrity is not an executable Noise/Biome/Jigsaw simulation."
+}

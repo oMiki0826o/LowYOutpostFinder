@@ -1,0 +1,25 @@
+# Build artifacts, secrets, generated worlds, and results
+.build/
+bin/
+__pycache__/
+*.pyc
+*.class
+.vscode/
+vanilla-*/
+world/
+server.properties
+eula.txt
+*.mca
+*.mcc
+results*.csv
+audit*.csv
+verified*.csv
+
+# Local/private project state
+data/
+results/
+.venv/
+.pytest_cache/
+.DS_Store
+.env
+*.log

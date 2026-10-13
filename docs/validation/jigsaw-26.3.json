@@ -1,0 +1,21 @@
+{
+  "version": "26.3",
+  "start_pool": "minecraft:pillager_outpost/base_plates",
+  "size": 7,
+  "project_start_to_heightmap": "WORLD_SURFACE_WG",
+  "template_pools_visited": 4,
+  "templates_visited": 11,
+  "pool_elements": {
+    "minecraft:empty_pool_element": 1,
+    "minecraft:legacy_single_pool_element": 11,
+    "minecraft:list_pool_element": 1
+  },
+  "connector_dependencies": 13,
+  "sha256": {
+    "structure_settings": "4fc3c4f5a4b6f87c23d8d6a1a366c1ded629a5f201df0ad2680b0f90f4154b70",
+    "pool_template_graph": "3f64458a97bbc88a8f70abe16ca1b9e832c643977bde15013f828ea0e45b9d04"
+  },
+  "complete_jigsaw_simulation_proven": false,
+  "status": "pool_and_template_graph_verified_only",
+  "limitations": "Jigsaw RNG, connectors alignment, collision and successful world generation have not been simulated."
+}
