@@ -1,5 +1,6 @@
 # Build artifacts, secrets, generated worlds, and results
 .build/
+.worktrees/
 bin/
 __pycache__/
 *.pyc
