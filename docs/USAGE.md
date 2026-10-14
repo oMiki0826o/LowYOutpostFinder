@@ -1,5 +1,17 @@
 # LowY Outpost Finder 使用教學
 
+## macOS 發布版
+
+在「蘋果選單 → 關於這台 Mac」確認晶片：Apple M 系列下載
+`LowYOutpostFinder-macos-arm64.jar`，Intel 下載
+`LowYOutpostFinder-macos-x86_64.jar`。安裝 Java 21 後可雙擊，或執行
+`java -jar 檔名.jar`；不需另裝 Python 或 Tk。
+
+首次啟動會離線展開約 100 MB 到 `~/Library/Caches/LowYOutpostFinder/`，日誌位於
+`~/Library/Logs/LowYOutpostFinder/launcher.log`。若 Gatekeeper 阻擋未簽署下載檔，
+先核對發布頁 SHA-256，再於 Finder 按住 Control 點擊並選「打開」，不要停用整體
+系統安全性。原始碼模式仍可執行 `python3 LowYOutpostFinder.py`。
+
 > 對應 2026-10-13 `main` 分支 1.0.0 為基礎之本地修復版 `2.0.1`。
 > 此文件依據修復版程式碼撰寫；操作步驟是可用指令的說明，**不表示本文件作者曾在你的電腦上完成原版伺服器端到端實測**。
 

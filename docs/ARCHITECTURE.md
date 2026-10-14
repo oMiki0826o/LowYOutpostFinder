@@ -1,5 +1,13 @@
 # 架構與設計取捨
 
+## macOS 自包含 JAR 邊界
+
+Java 21 啟動器只負責平台檢查、安全快取及啟動既有 Python GUI，不承載搜尋
+業務邏輯。arm64 與 x86_64 JAR 分別內含 SHA-256 鎖定的 CPython 3.13.16
+與 Tcl/Tk 9.0；payload 展開時驗證雜湊、大小、模式及安全路徑。它不包含
+Minecraft `server.jar`、世界、EULA 接受、結果、密碼或 `data/`。來源與授權
+記錄位於 `packaging/macos/`。
+
 這是一個偏重「可反查證據」而非純粹猜測世界結構 Y 的工具。以下說明目前實作，不是未完成的功能清單。
 
 ## 資料流程

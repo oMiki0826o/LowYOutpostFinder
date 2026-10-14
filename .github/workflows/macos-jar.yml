@@ -1,0 +1,28 @@
+name: macOS JAR checks
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  launcher-and-builder:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Java launcher tests
+        run: |
+          mkdir -p .build/launcher-test
+          javac --release 21 -d .build/launcher-test launcher/src/io/github/omiki/lowyoutpost/*.java launcher/test/io/github/omiki/lowyoutpost/*.java
+          for test in LauncherTest PayloadCacheTest ErrorReporterTest; do
+            java -ea -cp .build/launcher-test "io.github.omiki.lowyoutpost.$test"
+          done
+      - name: Synthetic deterministic JAR tests
+        run: python -m unittest tests.test_macos_jar tests.test_project_layout tests.test_release -v

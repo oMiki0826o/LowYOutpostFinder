@@ -2,6 +2,9 @@
 
 ## Unreleased — 2026-10-13（專案架構與啟動流程重構）
 
+- 新增 macOS arm64／x86_64 分離式自包含 JAR；使用者只需 Java 21，無需另裝 Python/Tk。
+- 發布器驗證 runtime 雜湊、Mach-O 架構、Tcl/Tk、授權、連結與逐檔完整性，並提供可重現建置及 CI。
+- JAR 不包含 Minecraft JAR、世界、EULA、結果或 AI／私有資料。
 - 根目錄收旂為唯一 `LowYOutpostFinder.py` GUI 啟動檔；進階 CLI 改為 `python -m lowy_outpost_finder`。
 - 應用程式移入 `lowy_outpost_finder/` 正式套件，統一路徑解析與子程序入口。
 - 原生原始碼收旂至 `native/src/`，建置統一為 `scripts/build_native.py`，並新增零第三方依賴清單。

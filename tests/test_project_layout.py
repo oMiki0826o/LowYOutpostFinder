@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib
 from pathlib import Path
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -26,6 +27,23 @@ class ProjectLayoutTests(unittest.TestCase):
     def test_root_has_one_python_launcher(self) -> None:
         python_files = sorted(path.name for path in ROOT.glob("*.py"))
         self.assertEqual(python_files, ["LowYOutpostFinder.py"])
+
+    def test_macos_release_sources_exist_without_tracked_binaries(self) -> None:
+        required = (
+            ".github/workflows/macos-jar.yml",
+            "launcher/src/io/github/omiki/lowyoutpost/Launcher.java",
+            "packaging/macos/runtime-lock.json",
+            "scripts/build_macos_jar.py",
+            "scripts/verify_macos_jar.py",
+        )
+        for relative in required:
+            self.assertTrue((ROOT / relative).is_file(), relative)
+        tracked = subprocess.run(
+            ["git", "ls-files"], cwd=ROOT, check=True, capture_output=True, text=True
+        ).stdout.splitlines()
+        forbidden_suffixes = (".jar", ".tar.gz", ".class")
+        self.assertFalse([path for path in tracked if path.endswith(forbidden_suffixes)])
+        self.assertFalse([path for path in tracked if path == "data" or path.startswith("data/")])
 
     def test_launcher_delegates_to_package_gui(self) -> None:
         launcher = importlib.import_module("LowYOutpostFinder")
