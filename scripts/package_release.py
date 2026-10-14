@@ -8,7 +8,7 @@ import hashlib
 from pathlib import Path
 import zipfile
 
-OMIT_DIRS = frozenset({'.git', '.build', '.superpowers', '.agents', '.codex',
+OMIT_DIRS = frozenset({'.git', '.build', '.superpowers', '.agents', '.codex', '.worktrees',
                        'bin', 'data', 'results', 'world',
                        '__pycache__', '.venv', '.pytest_cache', '.idea', '.vscode',
                        'dist', 'node_modules'})

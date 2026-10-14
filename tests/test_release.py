@@ -27,6 +27,7 @@ class ReleaseTests(unittest.TestCase):
             (package_dir / 'cli.py').write_text('def main(): return 0\n')
             for name in ('.git/config', '.build/temp.o', '.superpowers/plan.md',
                          '.agents/instructions.md', '.codex/state.json',
+                         '.worktrees/feature/private.md',
                          'bin/scanner', 'data/secret.txt',
                          'results/hits.csv', 'world/region/r.0.0.mca', '__pycache__/hi.pyc',
                          '.env', 'server.properties'):
