@@ -6,7 +6,15 @@ Minecraft Java 版掠奪者前哨站研究工具，提供繁體中文／英文 G
 
 ## 最簡單的啟動方式
 
-需要 Python 3.11 以上與 Tkinter。不需要安裝任何 PyPI 套件。
+macOS 發布版只需安裝 Java 21 以上，依處理器下載對應檔案後雙擊，或執行：
+
+```sh
+java -jar LowYOutpostFinder-macos-arm64.jar
+# Intel Mac 使用 LowYOutpostFinder-macos-x86_64.jar
+```
+
+發布版已內含 Python 與 Tk，不需另外安裝。從原始碼執行則需要 Python
+3.11 以上與 Tkinter：
 
 ```sh
 python3 LowYOutpostFinder.py

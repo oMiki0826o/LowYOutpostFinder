@@ -54,6 +54,8 @@ class RuntimeLock:
 class RuntimeLayout:
     arch: str
     python_path: str
+    tcl_library: str
+    tk_library: str
     members: tuple[str, ...]
 
 
@@ -78,6 +80,58 @@ def _safe_member_name(name: str) -> str:
     if pure.is_absolute() or not pure.parts or any(part in ("", ".", "..") for part in pure.parts):
         raise ValueError(f"Unsafe runtime path: {name}")
     return pure.as_posix()
+
+
+def _canonical_runtime_name(name: str) -> str:
+    if name == "python" or name.startswith("python/"):
+        return "runtime" + name[len("python"):]
+    if name == "runtime" or name.startswith("runtime/"):
+        return name
+    raise ValueError(f"Runtime member must be rooted at python/ or runtime/: {name}")
+
+
+def _resolve_tar_link(member: tarfile.TarInfo,
+                      members: dict[str, tarfile.TarInfo]) -> tarfile.TarInfo:
+    """Resolve an archive-internal link without allowing it to escape its root."""
+    current = member
+    visited: set[str] = set()
+    while current.issym() or current.islnk():
+        if current.name in visited:
+            raise ValueError(f"Runtime link cycle: {member.name}")
+        visited.add(current.name)
+        link = current.linkname
+        if "\\" in link or PurePosixPath(link).is_absolute():
+            raise ValueError(f"Unsafe runtime link: {member.name}")
+        base = PurePosixPath(current.name).parent if current.issym() else PurePosixPath()
+        parts: list[str] = []
+        for part in (base / link).parts:
+            if part in ("", "."):
+                continue
+            if part == "..":
+                if not parts:
+                    raise ValueError(f"Unsafe runtime link: {member.name}")
+                parts.pop()
+            else:
+                parts.append(part)
+        target_name = "/".join(parts)
+        target = members.get(target_name)
+        if target is None:
+            raise ValueError(f"Runtime link target is missing: {member.name}")
+        if _canonical_runtime_name(target_name).split("/", 1)[0] != "runtime":
+            raise ValueError(f"Unsafe runtime link: {member.name}")
+        current = target
+    if not current.isfile():
+        raise ValueError(f"Runtime link target is not a file: {member.name}")
+    return current
+
+
+def _runtime_member_data(source: tarfile.TarFile, member: tarfile.TarInfo,
+                         members: dict[str, tarfile.TarInfo]) -> tuple[bytes, int]:
+    target = _resolve_tar_link(member, members) if member.issym() or member.islnk() else member
+    handle = source.extractfile(target)
+    if handle is None:
+        raise ValueError(f"Unable to read runtime member: {member.name}")
+    return handle.read(), target.mode
 
 
 def _macho_arch(data: bytes) -> str:
@@ -107,10 +161,13 @@ def inspect_runtime(archive: Path, lock: RuntimeLock) -> RuntimeLayout:
     tkinter_found = False
     tcl_found = False
     tk_found = False
+    tcl_library = ""
+    tk_library = ""
     license_found = set()
     total_size = 0
     with tarfile.open(archive, "r:*") as source:
         members = source.getmembers()
+        member_map = {member.name: member for member in members}
         if len(members) > MAX_RUNTIME_FILES:
             raise ValueError("Runtime archive contains too many files")
         for member in members:
@@ -118,28 +175,28 @@ def inspect_runtime(archive: Path, lock: RuntimeLock) -> RuntimeLayout:
             if name in seen:
                 raise ValueError(f"Duplicate runtime member: {name}")
             seen.add(name)
-            if member.issym() or member.islnk():
-                raise ValueError(f"Runtime links are not allowed: {name}")
-            if not member.isfile():
+            if not (member.isfile() or member.issym() or member.islnk()):
                 continue
-            total_size += member.size
+            target = _resolve_tar_link(member, member_map) if member.issym() or member.islnk() else member
+            total_size += target.size
             if total_size > MAX_RUNTIME_BYTES:
                 raise ValueError("Runtime archive is too large")
-            names.append(name)
+            canonical_name = _canonical_runtime_name(name)
+            names.append(canonical_name)
             if name.endswith("/bin/python3") or name.endswith("/bin/python"):
-                handle = source.extractfile(member)
-                if handle is None:
-                    raise ValueError("Unable to inspect Python executable")
-                actual = _macho_arch(handle.read(64))
+                data, _ = _runtime_member_data(source, member, member_map)
+                actual = _macho_arch(data[:64])
                 if actual != lock.arch:
                     raise ValueError(f"Runtime architecture {actual} does not match {lock.arch}")
-                python_path = name
+                python_path = canonical_name
             if "_tkinter" in PurePosixPath(name).name:
                 tkinter_found = True
             if "/tcl" in name and name.endswith("init.tcl"):
                 tcl_found = True
-            if "/tk" in name and name.endswith("tk.tcl"):
+                tcl_library = str(PurePosixPath(canonical_name).parent)
+            if "/tk" in name and PurePosixPath(name).name == "tk.tcl":
                 tk_found = True
+                tk_library = str(PurePosixPath(canonical_name).parent)
             if name in lock.licenses:
                 license_found.add(name)
     if not python_path:
@@ -151,7 +208,8 @@ def inspect_runtime(archive: Path, lock: RuntimeLock) -> RuntimeLayout:
     missing_licenses = set(lock.licenses) - license_found
     if missing_licenses:
         raise ValueError(f"Runtime is missing license: {sorted(missing_licenses)[0]}")
-    return RuntimeLayout(lock.arch, python_path, tuple(sorted(names)))
+    return RuntimeLayout(lock.arch, python_path, tcl_library, tk_library,
+                         tuple(sorted(names)))
 
 
 def collect_application(root: Path) -> list[PayloadFile]:
@@ -176,20 +234,24 @@ def _zip_info(name: str, mode: int = 0o644) -> zipfile.ZipInfo:
     return info
 
 
+def _contains_forbidden_private_path(name: str) -> bool:
+    private_components = {"data", ".git", ".agents", ".codex", ".superpowers", ".env"}
+    return any(part in private_components for part in PurePosixPath(name).parts)
+
+
 def _runtime_payload(archive: Path) -> list[tuple[str, bytes, int]]:
     result: list[tuple[str, bytes, int]] = []
     with tarfile.open(archive, "r:*") as source:
-        for member in source.getmembers():
+        members = source.getmembers()
+        member_map = {member.name: member for member in members}
+        for member in members:
             name = _safe_member_name(member.name)
-            if member.issym() or member.islnk():
-                raise ValueError(f"Runtime links are not allowed: {name}")
-            if not member.isfile():
+            canonical_name = _canonical_runtime_name(name)
+            if not (member.isfile() or member.issym() or member.islnk()):
                 continue
-            handle = source.extractfile(member)
-            if handle is None:
-                raise ValueError(f"Unable to read runtime member: {name}")
-            mode = 0o755 if member.mode & 0o111 else 0o644
-            result.append((name, handle.read(), mode))
+            data, target_mode = _runtime_member_data(source, member, member_map)
+            mode = 0o755 if target_mode & 0o111 else 0o644
+            result.append((canonical_name, data, mode))
     return sorted(result)
 
 
@@ -212,7 +274,7 @@ def _compiled_launcher(root: Path) -> list[tuple[str, bytes, int]]:
 
 def build_jar(root: Path, runtime: Path, lock: RuntimeLock, output: Path) -> None:
     root = root.resolve()
-    inspect_runtime(runtime, lock)
+    layout = inspect_runtime(runtime, lock)
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
     payload: list[tuple[str, bytes, int]] = _runtime_payload(runtime)
     payload.extend((item.path, item.source.read_bytes(), item.mode)
@@ -230,7 +292,9 @@ def build_jar(root: Path, runtime: Path, lock: RuntimeLock, output: Path) -> Non
     jar_manifest = ("Manifest-Version: 1.0\r\n"
                     "Main-Class: io.github.omiki.lowyoutpost.Launcher\r\n"
                     "Created-By: LowYOutpostFinder reproducible builder\r\n\r\n").encode("utf-8")
-    properties = f"arch={lock.arch}\nversion={version}\n".encode("utf-8")
+    properties = (f"arch={lock.arch}\nversion={version}\n"
+                  f"tcl_library={layout.tcl_library}\n"
+                  f"tk_library={layout.tk_library}\n").encode("utf-8")
     entries = [("META-INF/MANIFEST.MF", jar_manifest, 0o644),
                ("launcher.properties", properties, 0o644),
                ("payload-manifest.tsv", payload_manifest, 0o644)]
@@ -283,8 +347,7 @@ def verify_jar(path: Path, expected_arch: str) -> VerificationReport:
             if mode not in ("0644", "0755"):
                 raise ValueError(f"Invalid payload mode: {mode}")
             total += len(data)
-        forbidden = ("data/", ".git", ".agents", ".codex", ".superpowers", ".env")
-        if any(any(part in name for part in forbidden) for name in names):
+        if any(_contains_forbidden_private_path(name) for name in names):
             raise ValueError("JAR contains forbidden private content")
         python_data = built.read("payload/runtime/bin/python3")
         if _macho_arch(python_data[:64]) != expected:

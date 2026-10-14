@@ -19,7 +19,10 @@ public final class LauncherTest {
         List<String> command = Launcher.pythonCommand(payload);
         assert command.equals(List.of(
                 payload.resolve("runtime/bin/python3").toString(),
-                "-I", "-s", "-E", "-m", "lowy_outpost_finder.gui")) : command;
+                "-I", "-s", "-E", "-c",
+                "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));"
+                        + "runpy.run_module('lowy_outpost_finder.gui',run_name='__main__')",
+                payload.resolve("app").toString())) : command;
         System.out.println("LauncherTest: OK");
     }
 

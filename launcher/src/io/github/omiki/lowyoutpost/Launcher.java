@@ -36,7 +36,11 @@ public final class Launcher {
     public static List<String> pythonCommand(Path payloadRoot) {
         List<String> command = new ArrayList<>();
         command.add(payloadRoot.resolve("runtime/bin/python3").toString());
-        command.addAll(List.of("-I", "-s", "-E", "-m", "lowy_outpost_finder.gui"));
+        command.addAll(List.of(
+                "-I", "-s", "-E", "-c",
+                "import runpy,sys;sys.path.insert(0,sys.argv.pop(1));"
+                        + "runpy.run_module('lowy_outpost_finder.gui',run_name='__main__')",
+                payloadRoot.resolve("app").toString()));
         return List.copyOf(command);
     }
 
@@ -45,9 +49,10 @@ public final class Launcher {
         builder.directory(payloadRoot.resolve("app").toFile());
         var environment = builder.environment();
         environment.keySet().removeIf(Launcher::isSensitiveEnvironmentKey);
-        environment.put("PYTHONPATH", payloadRoot.resolve("app").toString());
-        environment.put("TCL_LIBRARY", payloadRoot.resolve("runtime/lib/tcl8.6").toString());
-        environment.put("TK_LIBRARY", payloadRoot.resolve("runtime/lib/tk8.6").toString());
+        environment.put("TCL_LIBRARY", payloadRoot.resolve(
+                System.getProperty("lowy.tclLibrary", "runtime/lib/tcl8.6")).toString());
+        environment.put("TK_LIBRARY", payloadRoot.resolve(
+                System.getProperty("lowy.tkLibrary", "runtime/lib/tk8.6")).toString());
         builder.redirectErrorStream(true);
         builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile.toFile()));
         return builder;
@@ -69,6 +74,8 @@ public final class Launcher {
             }
             System.setProperty("lowy.targetArch", metadata.getProperty("arch"));
             System.setProperty("lowy.appVersion", metadata.getProperty("version"));
+            System.setProperty("lowy.tclLibrary", metadata.getProperty("tcl_library"));
+            System.setProperty("lowy.tkLibrary", metadata.getProperty("tk_library"));
             validatePlatform(System.getProperty("os.name"), System.getProperty("os.arch"),
                     Runtime.version().feature());
             ClassLoader resources = Launcher.class.getClassLoader();

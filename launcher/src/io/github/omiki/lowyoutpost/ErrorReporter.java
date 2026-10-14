@@ -27,7 +27,7 @@ final class ErrorReporter {
     }
 
     void report(String title, Throwable error) {
-        String detail = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
+        String detail = describe(error);
         String message = title + ": " + detail + System.lineSeparator()
                 + "Log: " + logFile;
         System.err.println(message);
@@ -35,6 +35,19 @@ final class ErrorReporter {
         if (!GraphicsEnvironment.isHeadless()) {
             JOptionPane.showMessageDialog(null, message, title, JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    static String describe(Throwable error) {
+        StringBuilder result = new StringBuilder();
+        Throwable current = error;
+        while (current != null) {
+            if (!result.isEmpty()) result.append("; caused by: ");
+            String message = current.getMessage();
+            result.append(current.getClass().getSimpleName());
+            if (message != null && !message.isBlank()) result.append(": ").append(message);
+            current = current.getCause();
+        }
+        return result.toString();
     }
 
     private void append(String message) {

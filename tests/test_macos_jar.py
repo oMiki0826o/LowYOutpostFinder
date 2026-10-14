@@ -14,8 +14,8 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from macos_jar import (RuntimeLock, build_jar, collect_application, inspect_runtime,
-                       verify_jar)
+from macos_jar import (RuntimeLock, _contains_forbidden_private_path, build_jar,
+                       collect_application, inspect_runtime, verify_jar)
 
 
 CPU = {"x86_64": 0x01000007, "arm64": 0x0100000C}
@@ -26,18 +26,20 @@ def macho(arch: str) -> bytes:
 
 
 def runtime_archive(path: Path, arch: str, *, tkinter: bool = True,
-                    license_file: bool = True) -> None:
+                    license_file: bool = True, prefix: str = "runtime",
+                    tk_version: str = "8.6") -> None:
     entries = {
-        "runtime/bin/python3": macho(arch),
-        "runtime/lib/python3.13/_tkinter.so": macho(arch),
-        "runtime/lib/tcl8.6/init.tcl": b"package provide Tcl 8.6\n",
-        "runtime/lib/tk8.6/tk.tcl": b"package provide Tk 8.6\n",
-        "runtime/LICENSE.txt": b"Python license\n",
+        f"{prefix}/bin/python3": macho(arch),
+        f"{prefix}/lib/python3.13/_tkinter.so": macho(arch),
+        f"{prefix}/lib/tcl{tk_version}/init.tcl": f"package provide Tcl {tk_version}\n".encode(),
+        f"{prefix}/lib/tk{tk_version}/tk.tcl": f"package provide Tk {tk_version}\n".encode(),
+        f"{prefix}/lib/tk{tk_version}/ttk/ttk.tcl": b"package provide ttk 1.0\n",
+        f"{prefix}/LICENSE.txt": b"Python license\n",
     }
     if not tkinter:
-        entries.pop("runtime/lib/python3.13/_tkinter.so")
+        entries.pop(f"{prefix}/lib/python3.13/_tkinter.so")
     if not license_file:
-        entries.pop("runtime/LICENSE.txt")
+        entries.pop(f"{prefix}/LICENSE.txt")
     with tarfile.open(path, "w:gz") as archive:
         for name, data in entries.items():
             info = tarfile.TarInfo(name)
@@ -47,6 +49,12 @@ def runtime_archive(path: Path, arch: str, *, tkinter: bool = True,
 
 
 class MacosJarContractTests(unittest.TestCase):
+    def test_private_path_filter_uses_complete_path_components(self) -> None:
+        self.assertFalse(_contains_forbidden_private_path(
+            "payload/runtime/lib/python3.13/importlib/metadata/__init__.py"))
+        self.assertTrue(_contains_forbidden_private_path("payload/app/data/secret.txt"))
+        self.assertTrue(_contains_forbidden_private_path("payload/app/.git/config"))
+
     def test_runtime_lock_requires_exact_arch_and_sha256(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -90,6 +98,44 @@ class MacosJarContractTests(unittest.TestCase):
                                    ("runtime/LICENSE.txt",))
                 with self.assertRaisesRegex(ValueError, missing):
                     inspect_runtime(archive, lock)
+
+    def test_python_build_standalone_layout_is_canonicalized(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            archive = Path(td) / "runtime.tar.gz"
+            runtime_archive(archive, "arm64", prefix="python", tk_version="9.0")
+            lock = RuntimeLock("arm64", "https://example.invalid/runtime", "3.13.16",
+                               "9.0", hashlib.sha256(archive.read_bytes()).hexdigest(),
+                               ("python/LICENSE.txt",))
+            layout = inspect_runtime(archive, lock)
+            self.assertEqual(layout.python_path, "runtime/bin/python3")
+            self.assertEqual(layout.tcl_library, "runtime/lib/tcl9.0")
+            self.assertEqual(layout.tk_library, "runtime/lib/tk9.0")
+
+    def test_runtime_materializes_safe_internal_links_and_rejects_escape(self) -> None:
+        for target, accepted in (("python3", True), ("../../outside", False)):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as td:
+                archive = Path(td) / "runtime.tar.gz"
+                runtime_archive(archive, "arm64", prefix="python", tk_version="9.0")
+                # Repack with one symlink because compressed tar archives cannot be appended.
+                with tarfile.open(archive, "r:gz") as source:
+                    members = [(member, source.extractfile(member).read())
+                               for member in source.getmembers() if member.isfile()]
+                with tarfile.open(archive, "w:gz") as output:
+                    for member, data in members:
+                        output.addfile(member, io.BytesIO(data))
+                    link = tarfile.TarInfo("python/bin/python-link")
+                    link.type = tarfile.SYMTYPE
+                    link.linkname = target
+                    output.addfile(link)
+                lock = RuntimeLock("arm64", "https://example.invalid/runtime", "3.13.16",
+                                   "9.0", hashlib.sha256(archive.read_bytes()).hexdigest(),
+                                   ("python/LICENSE.txt",))
+                if accepted:
+                    layout = inspect_runtime(archive, lock)
+                    self.assertIn("runtime/bin/python-link", layout.members)
+                else:
+                    with self.assertRaisesRegex(ValueError, "link"):
+                        inspect_runtime(archive, lock)
 
     def test_application_allowlist_excludes_private_state(self) -> None:
         with tempfile.TemporaryDirectory() as td:
