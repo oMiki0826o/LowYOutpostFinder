@@ -9,10 +9,13 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import warnings
+import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from macos_jar import RuntimeLock, collect_application, inspect_runtime
+from macos_jar import (RuntimeLock, build_jar, collect_application, inspect_runtime,
+                       verify_jar)
 
 
 CPU = {"x86_64": 0x01000007, "arm64": 0x0100000C}
@@ -104,6 +107,54 @@ class MacosJarContractTests(unittest.TestCase):
             names = [item.path for item in collect_application(root)]
             self.assertEqual(names, ["app/VERSION", "app/lowy_outpost_finder/__init__.py",
                                      "app/lowy_outpost_finder/gui.py"])
+
+    def test_build_is_executable_private_free_and_reproducible(self) -> None:
+        project = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            archive = root / "runtime.tar.gz"
+            runtime_archive(archive, "arm64")
+            lock = RuntimeLock("arm64", "https://example.invalid/runtime", "3.13.0",
+                               "8.6", hashlib.sha256(archive.read_bytes()).hexdigest(),
+                               ("runtime/LICENSE.txt",))
+            first = root / "LowYOutpostFinder-macos-arm64.jar"
+            second = root / "again.jar"
+            build_jar(project, archive, lock, first)
+            build_jar(project, archive, lock, second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+
+            with zipfile.ZipFile(first) as built:
+                names = built.namelist()
+                manifest = built.read("META-INF/MANIFEST.MF").decode()
+                self.assertIn("Main-Class: io.github.omiki.lowyoutpost.Launcher", manifest)
+                self.assertIn("payload-manifest.tsv", names)
+                self.assertIn("payload/runtime/bin/python3", names)
+                self.assertIn("payload/app/lowy_outpost_finder/gui.py", names)
+                self.assertFalse(any("data/" in name or ".git" in name for name in names))
+            report = verify_jar(first, "arm64")
+            self.assertEqual(report.arch, "arm64")
+            self.assertGreater(report.payload_files, 10)
+
+    def test_verifier_rejects_wrong_architecture_and_tampering(self) -> None:
+        project = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            archive = root / "runtime.tar.gz"
+            runtime_archive(archive, "x86_64")
+            lock = RuntimeLock("x86_64", "https://example.invalid/runtime", "3.13.0",
+                               "8.6", hashlib.sha256(archive.read_bytes()).hexdigest(),
+                               ("runtime/LICENSE.txt",))
+            output = root / "LowYOutpostFinder-macos-x86_64.jar"
+            build_jar(project, archive, lock, output)
+            with self.assertRaisesRegex(ValueError, "architecture"):
+                verify_jar(output, "arm64")
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                with zipfile.ZipFile(output, "a") as built:
+                    built.writestr("payload/app/VERSION", b"tampered")
+            with self.assertRaisesRegex(ValueError, "Duplicate|SHA-256"):
+                verify_jar(output, "x86_64")
 
 
 if __name__ == "__main__":

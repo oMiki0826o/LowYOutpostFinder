@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
 
 public final class Launcher {
     private Launcher() {}
@@ -61,6 +62,13 @@ public final class Launcher {
     public static void main(String[] args) {
         ErrorReporter reporter = new ErrorReporter();
         try {
+            Properties metadata = new Properties();
+            try (var input = Launcher.class.getClassLoader().getResourceAsStream("launcher.properties")) {
+                if (input == null) throw new IllegalStateException("Missing launcher metadata");
+                metadata.load(input);
+            }
+            System.setProperty("lowy.targetArch", metadata.getProperty("arch"));
+            System.setProperty("lowy.appVersion", metadata.getProperty("version"));
             validatePlatform(System.getProperty("os.name"), System.getProperty("os.arch"),
                     Runtime.version().feature());
             ClassLoader resources = Launcher.class.getClassLoader();
