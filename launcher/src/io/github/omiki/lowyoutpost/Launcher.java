@@ -63,7 +63,19 @@ public final class Launcher {
         try {
             validatePlatform(System.getProperty("os.name"), System.getProperty("os.arch"),
                     Runtime.version().feature());
-            throw new IllegalStateException("Embedded payload cache is not initialized");
+            ClassLoader resources = Launcher.class.getClassLoader();
+            PayloadManifest manifest = PayloadManifest.parse(
+                    resources.getResourceAsStream("payload-manifest.tsv"));
+            Path cacheRoot = Path.of(System.getProperty("user.home"), "Library", "Caches",
+                    "LowYOutpostFinder", System.getProperty("lowy.appVersion", "unknown"));
+            Path payload = PayloadCache.materialize(resources, manifest, cacheRoot);
+            Process process = processBuilder(payload, reporter.logFile()).start();
+            int exit = process.waitFor();
+            if (exit != 0) throw new IllegalStateException("GUI exited with status " + exit);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            reporter.report("LowYOutpostFinder was interrupted", interrupted);
+            System.exit(130);
         } catch (Exception error) {
             reporter.report("LowYOutpostFinder could not start", error);
             System.exit(1);
