@@ -18,6 +18,7 @@ verified*.csv
 
 # Local/private project state
 data/
+dist/
 results/
 .venv/
 .pytest_cache/

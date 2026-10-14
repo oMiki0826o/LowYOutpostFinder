@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["runtimes"],
+  "properties": {
+    "runtimes": {
+      "type": "object",
+      "required": ["arm64", "x86_64"],
+      "additionalProperties": false,
+      "properties": {
+        "arm64": {"$ref": "#/$defs/runtime"},
+        "x86_64": {"$ref": "#/$defs/runtime"}
+      }
+    }
+  },
+  "$defs": {
+    "runtime": {
+      "type": "object",
+      "required": ["url", "python", "tk", "sha256", "licenses"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string", "format": "uri"},
+        "python": {"type": "string", "minLength": 1},
+        "tk": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "licenses": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}
