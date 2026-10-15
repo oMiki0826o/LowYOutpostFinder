@@ -8,11 +8,12 @@ Minecraft Java 版掠奪者前哨站研究工具，提供繁體中文／英文 G
 
 ### macOS JAR 發布版
 
-前往 [GitHub Releases](https://github.com/oMiki0826o/LowYOutpostFinder/releases/latest)
-下載對應的檔案：
+直接從原始碼倉庫下載對應的檔案：
 
-- Apple M1／M2／M3／M4 等 Apple Silicon：`LowYOutpostFinder-macos-arm64.jar`
-- Intel Mac：`LowYOutpostFinder-macos-x86_64.jar`
+- Apple M1／M2／M3／M4 等 Apple Silicon：
+  [下載 ARM64 JAR](release/macos/LowYOutpostFinder-macos-arm64.jar?raw=1)
+- Intel Mac：
+  [下載 x86_64 JAR](release/macos/LowYOutpostFinder-macos-x86_64.jar?raw=1)
 
 使用者只需安裝 **Java 21 以上**。JAR 已包含 Python 3.13 與 Tk GUI，
 不需要另外安裝 Python、Tkinter 或 PyPI 套件。可直接雙擊 JAR，或執行：
@@ -27,7 +28,8 @@ java -jar LowYOutpostFinder-macos-arm64.jar
 `~/Library/Caches/LowYOutpostFinder/`，請至少保留 150 MB 可用空間；日誌位於
 `~/Library/Logs/LowYOutpostFinder/launcher.log`。
 
-下載後可使用 Release 附帶的 `SHA256SUMS-macos.txt` 核對檔案。若 macOS
+下載後可使用 [SHA256SUMS-macos.txt](release/macos/SHA256SUMS-macos.txt)
+核對檔案。若 macOS
 Gatekeeper 阻擋未簽署的 JAR，核對雜湊後可在 Finder 按住 Control 點擊檔案，
 選擇「打開」；不需要停用系統整體安全性。
 

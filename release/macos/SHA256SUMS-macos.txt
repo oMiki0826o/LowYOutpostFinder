@@ -1,0 +1,2 @@
+83a0453858282722eed63f599827c7eb833b7d17b7fcae6aa3e3808409c6ec5d  LowYOutpostFinder-macos-arm64.jar
+2778a7de942010ced594620edf1c68be3b7a2e5967d617a0020f0c6a4df3d7d5  LowYOutpostFinder-macos-x86_64.jar
