@@ -415,6 +415,33 @@ def scan(cfg: ScanConfig, out: Path, *, resume: bool = False,
 
 
 def run_command(args) -> None:
+    if args.height_engine == 'estimate':
+        if args.max_y is None:
+            raise ValueError('--height-engine estimate requires --max-y')
+        from .estimated_full_map import EstimatedScanConfig, scan_estimated, scan_estimated_nearest
+        cfg = EstimatedScanConfig(args.version, args.seed, args.x_min, args.x_max, args.z_min,
+                                  args.z_max, args.center_x, args.center_z, args.max_y, args.top,
+                                  args.batch_regions, args.cpu_rest_ms, args.engine, threads=args.threads)
+        def announce_estimate(state):
+            checked = state.get('processed_rings', state.get('processed_regions'))
+            total = state.get('total_regions', 'ring')
+            print(f"FULLMAP_ESTIMATE_PROGRESS {checked} {total} "
+                  f"{state['estimated_height_passes']} {state['status']}", file=sys.stderr, flush=True)
+        if args.strategy == 'nearest':
+            result = scan_estimated_nearest(cfg, args.out, resume=args.resume, max_batches=args.max_batches,
+                                             progress=announce_estimate)
+            print(f"Strict nearest estimated-height scan: {result['status']}; "
+                  f"{result['processed_rings']:,} centre-out rings; "
+                  f"{result['estimated_height_passes']:,} strict estimated hits. "
+                  "Results are estimates, not generated towers.", file=sys.stderr)
+        else:
+            result = scan_estimated(cfg, args.out, resume=args.resume, max_batches=args.max_batches,
+                                    progress=announce_estimate)
+            print(f"Full-map estimated-height scan: {result['status']} "
+                  f"{result['processed_regions']:,}/{result['total_regions']:,} grid cells; "
+                  f"{result['estimated_height_passes']:,} estimated hits. Results are estimates, not generated towers.",
+                  file=sys.stderr)
+        return
     cfg = ScanConfig(args.version, args.seed, args.x_min, args.x_max,
                      args.z_min, args.z_max, args.center_x, args.center_z,
                      args.top, args.batch_regions, args.cpu_rest_ms, args.engine)
@@ -458,10 +485,14 @@ def add_command(commands) -> None:
     a.add_argument('--top', type=int, default=100, help='Keep only the nearest N placement candidates (1..10000)')
     a.add_argument('--batch-regions', type=int, default=500_000, help='Cells per resumable checkpoint')
     a.add_argument('--cpu-rest-ms', type=int, default=150, help='Sleep after each batch to reduce sustained CPU load')
+    a.add_argument('--threads', type=int, default=0, help='Strict-nearest native estimated-height workers: 0 = automatic')
     a.add_argument('--engine', choices=('auto', 'python', 'native'), default='auto')
+    a.add_argument('--height-engine', choices=('placement', 'estimate'), default='placement',
+                   help='placement = X/Z candidates only; estimate = strict nearest or exhaustive 1.21.8 C11 projected base-plate Y')
+    a.add_argument('--max-y', type=int, help='Inclusive projected base-plate Y cutoff; required by --height-engine estimate')
     a.add_argument('--game-jar', type=Path, help='Optional version-matched vanilla asset placement check')
     a.add_argument('--strategy', choices=('nearest', 'exhaustive'), default='nearest',
-                   help='nearest = provably nearest placement top K with spatial pruning; exhaustive = check all cells with checkpoint')
+                   help='nearest = placement proof or strict estimated centre-out top K; exhaustive = checkpointed full scan')
     a.add_argument('--resume', action='store_true', help='Resume matching .state.json checkpoint')
     a.add_argument('--max-batches', type=int, default=0, help='Optional finite-run limit; incomplete scan is clearly marked')
     a.add_argument('--out', type=Path, required=True)

@@ -35,5 +35,13 @@ class GuiModelFullMapTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_arguments(SearchRequest(mode='full-map', out='a.csv', cpu_rest_ms='-1'))
 
+    def test_strict_nearest_estimate_passes_cutoff_and_result_limit(self):
+        args, _ = build_arguments(SearchRequest(
+            mode='full-map', out='strict.csv', seed='123', top='7', max_y='-37',
+            height_engine='estimate', scan_strategy='nearest'))
+        self.assertEqual(args[args.index('--height-engine') + 1], 'estimate')
+        self.assertEqual(args[args.index('--max-y') + 1], '-37')
+        self.assertEqual(args[args.index('--top') + 1], '7')
+
 if __name__ == '__main__':
     unittest.main()

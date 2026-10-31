@@ -130,7 +130,8 @@ class App(tk.Tk):
             'top': '25', 'center_y_below': '-37', 'core_archive': '', 'game_jar': '', 'server_jar': '',
             'java': 'java', 'memory': '2048', 'startup_timeout': '300',
             'priority': 'near-origin', 'sort_by': 'distance',
-            'scan_strategy': 'nearest', 'scan_engine': 'auto', 'batch_regions': '500000', 'cpu_rest_ms': '150'
+            'scan_strategy': 'nearest', 'scan_engine': 'auto', 'height_engine': 'placement',
+            'batch_regions': '500000', 'cpu_rest_ms': '150', 'threads': '0'
         }
         for name, value in defaults.items():
             self.vars[name] = tk.StringVar(value=value)
@@ -138,7 +139,7 @@ class App(tk.Tk):
         self.vars['resume'] = tk.BooleanVar(value=False)
         fields = ('version', 'seed', 'radius', 'center_x', 'center_z', 'world', 'candidates', 'max_y',
                   'top', 'center_y_below', 'core_archive', 'game_jar', 'server_jar', 'java', 'memory', 'startup_timeout',
-                  'eula_accepted', 'priority', 'sort_by', 'scan_strategy', 'scan_engine', 'batch_regions', 'cpu_rest_ms', 'resume',
+                  'eula_accepted', 'priority', 'sort_by', 'scan_strategy', 'scan_engine', 'height_engine', 'batch_regions', 'cpu_rest_ms', 'threads', 'resume',
                   'limit', 'offset', 'timeout', 'port', 'password', 'out')
         for row_index, field in enumerate(fields):
             line = ttk.Frame(self.form)
@@ -161,6 +162,10 @@ class App(tk.Tk):
             elif field == 'scan_engine':
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
                                       values=('auto', 'python', 'native'), width=21)
+                widget.pack(side='left', fill='x', expand=True, padx=(0, 6))
+            elif field == 'height_engine':
+                widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
+                                      values=('placement', 'estimate'), width=21)
                 widget.pack(side='left', fill='x', expand=True, padx=(0, 6))
             elif field == 'priority':
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
@@ -257,8 +262,8 @@ class App(tk.Tk):
         mode = self.mode.get()
         visibility = {
             'candidates': {'version', 'seed', 'radius', 'center_x', 'center_z', 'out'},
-            'full-map': {'version', 'seed', 'center_x', 'center_z', 'top', 'scan_strategy', 'scan_engine',
-                         'batch_regions', 'cpu_rest_ms', 'resume', 'out'},
+            'full-map': {'version', 'seed', 'center_x', 'center_z', 'top', 'height_engine', 'max_y', 'scan_strategy', 'scan_engine',
+                         'batch_regions', 'cpu_rest_ms', 'threads', 'resume', 'out'},
             'seed-geometry': {'version', 'seed', 'radius', 'center_x', 'center_z', 'game_jar', 'out'},
             'estimate': {'version', 'seed', 'radius', 'max_y', 'top', 'center_y_below', 'core_archive', 'game_jar', 'out'},
             'world': {'version', 'world', 'max_y', 'out'},

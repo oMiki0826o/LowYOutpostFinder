@@ -41,8 +41,10 @@ class SearchRequest:
     sort_by: str = 'distance'
     scan_strategy: str = 'nearest'
     scan_engine: str = 'auto'
+    height_engine: str = 'placement'
     batch_regions: str = '500000'
     cpu_rest_ms: str = '150'
+    threads: str = '0'
     resume: bool = False
 
 
@@ -85,15 +87,20 @@ def build_arguments(req: SearchRequest, *, language: str = 'zh-TW') -> tuple[lis
             raise ValueError('scan_strategy must be nearest or exhaustive')
         if req.scan_engine not in ('auto', 'python', 'native'):
             raise ValueError('scan_engine must be auto, python or native')
+        if req.height_engine not in ('placement', 'estimate'):
+            raise ValueError('height_engine must be placement or estimate')
         if req.resume and req.scan_strategy != 'exhaustive':
             raise ValueError('Resume is available only for exhaustive scans')
         args += ['--seed', str(seed),
                  '--center-x', str(num(req.center_x, 'center_x', -29_999_984, 29_999_984)),
                  '--center-z', str(num(req.center_z, 'center_z', -29_999_984, 29_999_984)),
                  '--top', str(num(req.top, 'top', 1, 10000)),
-                 '--strategy', req.scan_strategy, '--engine', req.scan_engine,
+                 '--strategy', req.scan_strategy, '--engine', req.scan_engine, '--height-engine', req.height_engine,
                  '--batch-regions', str(num(req.batch_regions, 'batch_regions', 1, 5_000_000)),
-                 '--cpu-rest-ms', str(num(req.cpu_rest_ms, 'cpu_rest_ms', 0, 5000))]
+                 '--cpu-rest-ms', str(num(req.cpu_rest_ms, 'cpu_rest_ms', 0, 5000)),
+                 '--threads', str(num(req.threads, 'threads', 0, 256))]
+        if req.height_engine == 'estimate':
+            args += ['--max-y', str(num(req.max_y, 'max_y', -64, 320))]
         if req.resume:
             args.append('--resume')
         return args, env

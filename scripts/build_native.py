@@ -48,7 +48,7 @@ def _extract_core(archive: Path, destination: Path) -> None:
         raise RuntimeError("Supported upstream archives: .zip, .tar.gz, .tgz")
 
 
-def build_terrain(archive: Path) -> Path:
+def build_terrain(archive: Path, output_name: str = "lowyoutpost") -> Path:
     if not archive.is_file():
         raise RuntimeError(f"Missing LowYSwampHut source archive: {archive}")
     if not shutil.which("cmake"):
@@ -61,13 +61,22 @@ def build_terrain(archive: Path) -> Path:
         raise RuntimeError("Archive must contain exactly one lysh-c/src/rng.c")
     source_dir = rng_sources[0].parent
     project_dir = source_dir.parent
+    # The upstream project enables AVX2 unconditionally on non-macOS builds.
+    # Keep the downloaded archive intact, but make the disposable build copy
+    # portable to CPUs and virtual machines without AVX2 support.
+    cmake_lists = project_dir / "CMakeLists.txt"
+    contents = cmake_lists.read_text(encoding="utf-8")
+    portable = contents.replace("    add_compile_options(-mavx2)\n", "")
+    if portable == contents:
+        raise RuntimeError("LowYSwampHut CMake file has no expected AVX2 setting")
+    cmake_lists.write_text(portable, encoding="utf-8")
     subprocess.run([
         "cmake", "-S", str(project_dir), "-B", str(build_root),
         "-DLYSH_JNI=OFF", "-DLYSH_LTO=OFF",
         "-DCMAKE_C_FLAGS=-include stddef.h", "-DCMAKE_BUILD_TYPE=Release",
     ], check=True)
     subprocess.run(["cmake", "--build", str(build_root), "--parallel", "2"], check=True)
-    destination = ROOT / "bin" / ("lowyoutpost.exe" if os.name == "nt" else "lowyoutpost")
+    destination = ROOT / "bin" / (output_name + (".exe" if os.name == "nt" else ""))
     destination.parent.mkdir(parents=True, exist_ok=True)
     command = [
         compiler(), "-std=c11", "-O2", "-Wall", "-Wextra", "-ffp-contract=off",
@@ -84,9 +93,12 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("region", help="build the standalone placement scanner")
     terrain = subparsers.add_parser("terrain", help="build the experimental terrain sampler")
     terrain.add_argument("archive", type=Path, help="user-supplied LowYSwampHut source archive")
+    estimate = subparsers.add_parser("estimate", help="build the resumable estimated-height scanner")
+    estimate.add_argument("archive", type=Path, help="user-supplied LowYSwampHut source archive")
     args = parser.parse_args(argv)
     try:
-        output = build_region() if args.target == "region" else build_terrain(args.archive)
+        output = build_region() if args.target == "region" else build_terrain(
+            args.archive, "outpost_estimate" if args.target == "estimate" else "lowyoutpost")
     except (OSError, RuntimeError, subprocess.SubprocessError, tarfile.TarError) as exc:
         parser.exit(2, f"ERROR: {exc}\n")
     print(f"Built: {output}")
