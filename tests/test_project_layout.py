@@ -28,7 +28,7 @@ class ProjectLayoutTests(unittest.TestCase):
         python_files = sorted(path.name for path in ROOT.glob("*.py"))
         self.assertEqual(python_files, ["LowYOutpostFinder.py"])
 
-    def test_macos_release_sources_and_repository_downloads_exist(self) -> None:
+    def test_macos_release_sources_exist_without_repository_binaries(self) -> None:
         required = (
             ".github/workflows/macos-jar.yml",
             "launcher/src/io/github/omiki/lowyoutpost/Launcher.java",
@@ -41,16 +41,8 @@ class ProjectLayoutTests(unittest.TestCase):
         tracked = subprocess.run(
             ["git", "ls-files"], cwd=ROOT, check=True, capture_output=True, text=True
         ).stdout.splitlines()
-        release_files = {
-            "release/macos/LowYOutpostFinder-macos-arm64.jar",
-            "release/macos/LowYOutpostFinder-macos-x86_64.jar",
-            "release/macos/SHA256SUMS-macos.txt",
-        }
-        self.assertTrue(all((ROOT / path).is_file() for path in release_files))
-        self.assertTrue(release_files.issubset(tracked))
         forbidden = [
-            path for path in tracked
-            if path.endswith((".jar", ".tar.gz", ".class")) and path not in release_files
+            path for path in tracked if path.endswith((".jar", ".tar.gz", ".class"))
         ]
         self.assertFalse(forbidden)
         self.assertFalse([path for path in tracked if path == "data" or path.startswith("data/")])

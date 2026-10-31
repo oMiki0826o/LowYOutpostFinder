@@ -2,6 +2,7 @@
 .build/
 .worktrees/
 bin/
+/release/
 __pycache__/
 *.pyc
 *.class
