@@ -10,16 +10,16 @@ from tkinter import ttk
 
 PALETTES = {
     'dark': {
-        'bg': '#171c22', 'surface': '#222a33', 'raised': '#2c3742',
-        'fg': '#e8eef2', 'muted': '#afbdc9', 'border': '#435563',
-        'accent': '#4ba398', 'selected': '#345e60', 'verified': '#82e0c3',
-        'estimated': '#eac18d', 'candidate': '#a7bfd7', 'error': '#ff9999',
+        'bg': '#000000', 'surface': '#0b0b0b', 'raised': '#191919',
+        'fg': '#ffffff', 'muted': '#b0b0b0', 'border': '#444444',
+        'accent': '#ffffff', 'selected': '#333333', 'verified': '#eeeeee',
+        'estimated': '#aaaaaa', 'candidate': '#c0c0c0', 'error': '#ffffff',
     },
     'light': {
-        'bg': '#f4f7f7', 'surface': '#ffffff', 'raised': '#e8f0f0',
-        'fg': '#223a3c', 'muted': '#587076', 'border': '#b9cece',
-        'accent': '#236e69', 'selected': '#d3ece7', 'verified': '#165e50',
-        'estimated': '#805000', 'candidate': '#516470', 'error': '#a12828',
+        'bg': '#ffffff', 'surface': '#ffffff', 'raised': '#ededed',
+        'fg': '#111111', 'muted': '#555555', 'border': '#aaaaaa',
+        'accent': '#111111', 'selected': '#dddddd', 'verified': '#111111',
+        'estimated': '#555555', 'candidate': '#777777', 'error': '#222222',
     },
 }
 
