@@ -493,6 +493,17 @@ class SimpleApp(tk.Tk):
         self.log_text.see('end')
         self.log_text.configure(state='disabled')
 
+    def _explain_bootstrap_error(self, detail: str) -> str:
+        if self.language == 'en-US':
+            return detail
+        return (
+            '目前尚無法自動編譯 C 高度搜尋器。請確認 Git、CMake 與 C11 編譯器已安裝。\n'
+            'macOS：請先安裝 Xcode Command Line Tools 及 CMake；'
+            'Ubuntu：請安裝 git、cmake、build-essential。\n'
+            '安裝完成後可在右上角設定重新嘗試。\n'
+            '詳細訊息：' + detail
+        )
+
     def _poll(self):
         if self._closing:
             return
@@ -512,9 +523,10 @@ class SimpleApp(tk.Tk):
                     if self._ready:
                         self.search_btn.configure(state='normal')
                     else:
-                        self._append_log(event[2])
+                        explanation = self._explain_bootstrap_error(event[2])
+                        self._append_log(explanation)
                         self.notebook.select(1)
-                        messagebox.showerror(self.t('setup_fail'), event[2], parent=self)
+                        messagebox.showerror(self.t('setup_fail'), explanation, parent=self)
                 elif kind == 'log':
                     self._append_log(event[1])
                     match = re.match(r'^FULLMAP_ESTIMATE_PROGRESS (\d+) (\d+|ring) (\d+) ', event[1])
