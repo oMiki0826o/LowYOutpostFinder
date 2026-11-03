@@ -156,7 +156,7 @@ class SimpleApp(tk.Tk):
     def _entry_field(self, parent, title: str, variable: tk.StringVar,
                      *, version: bool = False):
         frame = tk.Frame(parent)
-        frame.pack(fill='x', expand=True, padx=(0, 12) if parent == self.fields_row else 0)
+        frame.pack(fill='x', expand=True)
         label = self._label(frame, title, 11, pady=(4, 6), anchor='w')
         if version:
             field = ttk.Combobox(frame, textvariable=variable,
