@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+import time
 import unittest
 from unittest.mock import patch
 
@@ -121,6 +122,34 @@ class SimpleHomeTkTests(unittest.TestCase):
         self.assertIn('編譯', message)
         self.assertIn('CMake', message)
         self.assertIn('macOS', message)
+
+    def test_live_scan_progress_updates_percent_and_log_before_completion(self):
+        app = self.app
+        app._busy = True
+        app._ready = True
+        app._scan_started = time.monotonic() - 2
+        app._last_heartbeat = time.monotonic()
+        app._scan_target = 25
+        app.events.put(('log', 'LOWY_SCAN_PROGRESS 4096 18 2 25 running'))
+        app._poll()
+        self.assertEqual(str(app.progress.cget('mode')), 'determinate')
+        self.assertEqual(float(app.progress.cget('value')), 8.0)
+        self.assertIn('2/25', app.progress_caption.cget('text'))
+        self.assertIn('4,096', app.log_text.get('1.0', 'end'))
+        app._busy = False
+
+    def test_zero_hits_still_show_reported_scanned_regions(self):
+        app = self.app
+        app._busy = True
+        app._ready = True
+        app._scan_started = time.monotonic() - 1
+        app._last_heartbeat = time.monotonic()
+        app._scan_target = 25
+        app.events.put(('log', 'LOWY_SCAN_PROGRESS 8192 22 0 25 running'))
+        app._poll()
+        self.assertEqual(float(app.progress.cget('value')), 0.0)
+        self.assertIn('8,192', app.log_text.get('1.0', 'end'))
+        app._busy = False
 
     def test_window_destroy_removes_poll_timer_without_error(self):
         app = self.app
