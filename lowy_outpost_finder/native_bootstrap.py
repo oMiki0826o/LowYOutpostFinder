@@ -7,6 +7,7 @@ privilege escalation, automatic package manager, or unpinned code execution.
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -34,9 +35,40 @@ class BootstrapError(RuntimeError):
     """An actionable native-toolchain error, safe to display in the GUI."""
 
 
+EXPECTED_MODEL = 'lowyswamphut-approx-1.21.8-centre-strict-single-sample'
+
+
 def estimator_available(path: Path | None = None) -> bool:
+    """Exercise the strict-nearest JSON protocol before trusting an existing binary.
+
+    A filename and executable bit alone do not prove architecture or model
+    compatibility. This one-region seed is bounded and does not generate world
+    chunks; an outdated C scanner fails closed and is rebuilt when possible.
+    """
     binary = Path(path) if path is not None else native_binary('outpost_estimate')
-    return binary.is_file() and os.access(binary, os.X_OK)
+    if not binary.is_file() or not os.access(binary, os.X_OK):
+        return False
+    command = [
+        str(binary), '--json', '--seed', '123',
+        '--x-min', '-512', '--x-max', '512',
+        '--z-min', '-512', '--z-max', '512',
+        '--center-x', '0', '--center-z', '0',
+        '--start-ring', '0', '--ring-count', '1',
+        '--max-y', '320', '--top', '1', '--threads', '1',
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True,
+                                timeout=15, check=False)
+        if result.returncode != 0:
+            return False
+        payload = json.loads(result.stdout)
+        return (isinstance(payload, dict)
+                and payload.get('model_fingerprint') == EXPECTED_MODEL
+                and type(payload.get('matches')) is int
+                and payload.get('next_ring') == 1
+                and isinstance(payload.get('rows'), list))
+    except (OSError, ValueError, TypeError, subprocess.TimeoutExpired):
+        return False
 
 
 def _report(callback: Callable[[str], None] | None, message: str) -> None:
