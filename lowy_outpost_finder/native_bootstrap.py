@@ -18,6 +18,7 @@ import time
 from typing import Callable
 
 from .paths import PROJECT_ROOT, native_binary
+from .process_control import launch_scanner, stop_scanner
 
 
 UPSTREAM_URL = 'https://github.com/M33Galaxy/LowYSwampHut.git'
@@ -81,7 +82,7 @@ def _command(argv: list[str], *, cwd: Path | None = None, timeout: int = 900,
     """Capture compiler diagnostics while allowing the launcher to cancel setup."""
     command = [str(x) for x in argv]
     try:
-        proc = subprocess.Popen(
+        proc = launch_scanner(
             command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding='utf-8', errors='replace',
             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
@@ -105,7 +106,7 @@ def _command(argv: list[str], *, cwd: Path | None = None, timeout: int = 900,
         return output
     except BaseException:
         if proc.poll() is None:
-            proc.terminate()
+            stop_scanner(proc)
             try:
                 proc.communicate(timeout=5)
             except subprocess.TimeoutExpired:
