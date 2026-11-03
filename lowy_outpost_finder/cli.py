@@ -119,6 +119,31 @@ def candidates(seed: int, radius: int, *, center_x: int = 0, center_z: int = 0) 
                            classification='placement_candidate')
 
 
+def nearest_candidates(seed: int, radius: int, top: int, *,
+                       center_x: int = 0, center_z: int = 0) -> Iterator[dict]:
+    """Find the nearest N seed-derived X/Z placement candidates within a square.
+
+    The proof covers placement only; it does not verify biomes, terrain or Y.
+    """
+    if not 1 <= top <= 10000:
+        raise ValueError('--nearest must be in 1..10000')
+    if not 0 <= radius <= 30_000_000:
+        raise ValueError('--radius must be in 0..30000000')
+    if not all(type(v) is int and -30_000_000 <= v <= 30_000_000
+               for v in (center_x, center_z)):
+        raise ValueError('--center-x and --center-z must be integer blocks in ±30000000')
+    from .full_map import RegionGrid, WORLD_EDGE, scan_nearest
+    x_min, x_max = max(-WORLD_EDGE, center_x-radius), min(WORLD_EDGE, center_x+radius)
+    z_min, z_max = max(-WORLD_EDGE, center_z-radius), min(WORLD_EDGE, center_z+radius)
+    if x_min > x_max or z_min > z_max:
+        return
+    hits, _evidence = scan_nearest(RegionGrid(x_min, x_max, z_min, z_max),
+                                   seed, top, center_x, center_z)
+    for cx, cz in hits:
+        yield dict(seed=seed, chunk_x=cx, chunk_z=cz, x=cx*16, z=cz*16,
+                   classification='placement_candidate')
+
+
 def is_candidate_start(seed: int, cx: int, cz: int) -> bool:
     """Require a complete vanilla placement candidate before generating via RCON."""
     rx, rz = cx // OUTPOST[0], cz // OUTPOST[0]
@@ -359,9 +384,14 @@ def run_candidates(args):
         from .game_archive import require_matching_game_version
         require_matching_game_version(args.game_jar, args.version)
         validate_placement_assets(args.game_jar)
-    write_csv(args.out, (dict(version=args.version, **row) for row in candidates(
-        args.seed, args.radius, center_x=getattr(args, 'center_x', 0),
-        center_z=getattr(args, 'center_z', 0))), CANDIDATE_FIELDS)
+    nearest = getattr(args, 'nearest', None)
+    results = (nearest_candidates(args.seed, args.radius, nearest,
+                                  center_x=getattr(args, 'center_x', 0),
+                                  center_z=getattr(args, 'center_z', 0))
+               if nearest is not None else
+               candidates(args.seed, args.radius, center_x=getattr(args, 'center_x', 0),
+                          center_z=getattr(args, 'center_z', 0)))
+    write_csv(args.out, (dict(version=args.version, **row) for row in results), CANDIDATE_FIELDS)
 
 
 def run_verify(args):
@@ -667,6 +697,7 @@ def main(argv=None) -> int:
     a.add_argument('--seed', type=signed_seed, required=True)
     a.add_argument('--game-jar', type=Path, help='驗證對應遊戲資源 JAR 的結構放置參數與內建算法相符')
     a.add_argument('--radius', type=int, default=8192, help='以指定中心為準的正方形半徑（方塊）')
+    a.add_argument('--nearest', type=int, metavar='N', help='僅輸出最近 N 個 X/Z 候選；不確認 Y')
     a.add_argument('--center-x', type=int, default=0, help='搜尋中心方塊 X，預設世界原點')
     a.add_argument('--center-z', type=int, default=0, help='搜尋中心方塊 Z，預設世界原點')
     a.add_argument('--out', type=Path)
