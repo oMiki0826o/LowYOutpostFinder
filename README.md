@@ -77,6 +77,19 @@ python3 -m lowy_outpost_finder full-map \
 
 其他進階模式及限制請參考 [極簡首頁指南](docs/SIMPLE_HOME.md), [架構說明](docs/ARCHITECTURE.md) 與 [CLI 使用指南](docs/USAGE.md).
 
+### 搜尋進度及 macOS 原生編譯
+
+簡潔首頁會顯示依「符合條件的近似候選／目標數量」計算的進度條，
+例如找到 2/25 筆表示 8%，**並非已掃描全世界 8%**。
+執行紀錄會顯示已掃描的 512×512 方塊前哨站生成區域數、
+找到的候選數與經過時間。原生引擎尚未回報時，介面仍定期輸出
+等待下一次掃描回報的心跳，但不會虛構掃描數量。
+
+macOS Clang 的 C11 相容性修正已納入自動編譯流程：
+先確認上游固定版本的常數及斷言格式，再修補一次性建置副本，
+避免重新下載時覆寫使用者手動修正。完整回歸測試可使用
+`python -m pytest -q tests`（GUI 測試需顯示器或 Xvfb）。
+
 ### 授權
 
 本專案採用 [MIT License](LICENSE). C 高度估算器會使用第三方 MIT 授權的 LowYSwampHut 原始碼, 其授權與作者資訊以原始專案為準. Minecraft 為 Mojang Studios 的作品. 本專案不包含官方 Minecraft server JAR 或世界存檔.
@@ -150,6 +163,23 @@ python3 -m lowy_outpost_finder full-map \
 ```
 
 See [Simple Home](docs/SIMPLE_HOME.md), [Architecture](docs/ARCHITECTURE.md) and [CLI Usage](docs/USAGE.md) for advanced modes and limitations.
+
+### Live progress and native build on macOS
+
+The estimated-height home now shows a **determinate** progress bar for matched
+candidates (found / requested, e.g. 2/25 = 8%). This is **not the fraction
+of the world scanned**. The execution log also reports the actual number of
+512×512-block outpost-placement regions scanned, matched candidate count and
+elapsed seconds. If no new native event arrives, a timed heartbeat keeps
+the UI responsive without inventing processed regions.
+
+For macOS Clang, the pinned upstream C source's floating-point `_Static_assert`
+is replaced only after checking the exact audited source expression and
+IEEE-754 constant equivalence. This occurs in the disposable build copy,
+so re-running automatic setup will not undo the portability fix.
+
+Run `python -m pytest -q tests` (with a graphical display/Xvfb for GUI tests)
+and `python scripts/run_headless_tests.py` for regression checks.
 
 ### License
 
