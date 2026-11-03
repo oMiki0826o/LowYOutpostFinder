@@ -6,6 +6,9 @@ import unittest
 from unittest.mock import patch
 
 from lowy_outpost_finder.simple_workflow import SimpleRequest, build_search_arguments, export_results
+from lowy_outpost_finder.simple_gui import is_classic_entry
+import tkinter as tk
+from tkinter import ttk
 from lowy_outpost_finder.native_bootstrap import BootstrapError, ensure_native_estimator, estimator_available
 
 
@@ -97,6 +100,17 @@ class SimpleWorkflowTests(unittest.TestCase):
                     f'1.21.8,1,1,2,16,32,{y},{status}\\n', encoding='utf-8')
                 with self.assertRaises(ValueError):
                     export_results(raw, Path(td)/'public.csv', req)
+
+
+class TkThemeTypeGuardsTests(unittest.TestCase):
+    """No display server needed; tests Tk's actual Python MRO on all OSes."""
+
+    def test_ttk_entry_and_combobox_are_not_classic_entries(self):
+        self.assertTrue(issubclass(ttk.Entry, tk.Entry))
+        self.assertTrue(issubclass(ttk.Combobox, tk.Entry))
+        self.assertTrue(is_classic_entry(tk.Entry.__new__(tk.Entry)))
+        self.assertFalse(is_classic_entry(ttk.Entry.__new__(ttk.Entry)))
+        self.assertFalse(is_classic_entry(ttk.Combobox.__new__(ttk.Combobox)))
 
 
 class NativeBootstrapTests(unittest.TestCase):

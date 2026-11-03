@@ -5,7 +5,7 @@ import tkinter as tk
 import unittest
 from unittest.mock import patch
 
-from lowy_outpost_finder.simple_gui import SimpleApp, PUBLIC_FIELDS
+from lowy_outpost_finder.simple_gui import SimpleApp, PUBLIC_FIELDS, is_classic_entry
 from lowy_outpost_finder.gui import App as LegacyApp
 
 
@@ -14,8 +14,14 @@ class SimpleHomeTkTests(unittest.TestCase):
         try:
             self.app = SimpleApp(auto_prepare=False)
             self.app.update_idletasks()
-        except tk.TclError:
-            self.skipTest('No graphical Tk display')
+        except tk.TclError as exc:
+            # Never disguise a real UI startup regression (e.g. unknown -bg
+            # on macOS ttk.Combobox) as missing DISPLAY.
+            reason = str(exc).lower()
+            if ('no display name' in reason or "couldn't connect to display" in reason
+                    or 'could not connect to display' in reason):
+                self.skipTest('No graphical Tk display')
+            raise
 
     def tearDown(self):
         if hasattr(self, 'app'):
@@ -23,6 +29,20 @@ class SimpleHomeTkTests(unittest.TestCase):
                 self.app._on_close()
             except tk.TclError:
                 pass
+
+    def test_ttk_combobox_is_not_styled_as_classic_tk_entry(self):
+        """ttk.Combobox inherits tk.Entry but rejects classic -bg/-fg options."""
+        import tkinter.ttk as ttk
+        self.assertTrue(issubclass(ttk.Combobox, tk.Entry))
+        app = self.app
+        self.assertIsInstance(app.version_field, ttk.Combobox)
+        self.assertFalse(is_classic_entry(app.version_field))
+        self.assertTrue(is_classic_entry(app.seed_field))
+        # Both initial theming and toggling must remain safe on real Tk.
+        app._apply_theme()
+        app._toggle_theme()
+        app._toggle_theme()
+        self.assertEqual(app.theme_mode, 'dark')
 
     def test_black_white_default_values_and_result_columns(self):
         app = self.app
