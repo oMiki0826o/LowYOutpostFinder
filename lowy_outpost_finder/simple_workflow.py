@@ -124,8 +124,9 @@ def export_results(raw_csv: Path, public_csv: Path, req: SimpleRequest) -> list[
             })
             if len(records) > q['top']:
                 raise ValueError('Native engine returned too many results')
-    records.sort(key=lambda row: (float(row['distance_from_center']),
-                                  row['x'], row['z']))
+    records.sort(key=lambda row: (
+        (row['x'] - q['center_x']) ** 2 + (row['z'] - q['center_z']) ** 2,
+        row['x'], row['z']))
     for i, row in enumerate(records, 1):
         row['index'] = i
     public_csv.parent.mkdir(parents=True, exist_ok=True)
