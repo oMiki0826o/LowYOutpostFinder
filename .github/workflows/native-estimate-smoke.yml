@@ -2,7 +2,7 @@ name: Native estimated-height smoke
 
 on:
   push:
-    branches: [feat/simple-low-y-home-20261103]
+    branches: [main, feat/simple-low-y-home-20261103]
     paths:
       - 'lowy_outpost_finder/native_bootstrap.py'
       - 'lowy_outpost_finder/simple_workflow.py'
@@ -64,4 +64,18 @@ jobs:
                   reader = csv.DictReader(f)
                   assert reader.fieldnames[4] == 'estimated_y'
               print(rows[0])
+              # Exercise the real low-Y threshold as well. A small bounded
+              # area may legitimately have no qualifying estimated heights.
+              strict_req = SimpleRequest(seed='123', radius='4096',
+                                         max_y='-37', top='1')
+              strict_raw = folder / 'strict.csv'
+              strict_public = folder / 'strict-public.csv'
+              strict_run = subprocess.run(
+                  [sys.executable, '-m', 'lowy_outpost_finder',
+                   *build_search_arguments(strict_req, strict_raw)],
+                  check=True, capture_output=True, text=True, timeout=240)
+              print(strict_run.stderr[-800:])
+              strict_rows = export_results(strict_raw, strict_public, strict_req)
+              assert all(row['estimated_y'] < -37 for row in strict_rows)
+              print('Y<-37 strict filter checked:', len(strict_rows), 'matching estimates')
           PY
