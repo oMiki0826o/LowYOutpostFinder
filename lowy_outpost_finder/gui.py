@@ -6,6 +6,7 @@ Built on Python's standard library. No game client modification is performed.
 from __future__ import annotations
 
 import csv
+from pathlib import Path
 from datetime import datetime
 import os
 import queue
@@ -18,6 +19,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from .gui_model import SearchRequest, build_arguments
+from .ui_visual import PALETTES, HoverTips, apply_theme, height_note, hover_text
 from .explorer_gui import AdvancedWindow
 from .i18n import CATALOGS, tr
 from .paths import PROJECT_ROOT, cli_command
@@ -33,6 +35,7 @@ class App(tk.Tk):
     def __init__(self, language: str = 'zh-TW'):
         super().__init__()
         self.language = tk.StringVar(value=language)
+        self.theme_mode = tk.StringVar(value='dark')
         self.title(self.t('window_title'))
         self.geometry('1070x720')
         self.minsize(810, 570)
@@ -51,6 +54,10 @@ class App(tk.Tk):
         self.banner = tk.StringVar(value=self.t('banner_ready'))
         self._theme()
         self._build()
+        self._hover = HoverTips(self, lambda: PALETTES[self.theme_mode.get()])
+        self._install_hover()
+        self._install_form_scrolling()
+        self._apply_theme()
         self._set_mode()
         self._apply_language()
         self._poll_id = self.after(100, self._poll)
@@ -62,21 +69,80 @@ class App(tk.Tk):
         return tr(self.language.get(), key, **values)
 
     def _theme(self):
-        style = ttk.Style(self)
-        if 'clam' in style.theme_names():
-            style.theme_use('clam')
-        self.configure(bg='#f4f7f7')
-        style.configure('TFrame', background='#f4f7f7')
-        style.configure('TLabel', background='#f4f7f7', foreground='#223a3c')
-        style.configure('Header.TLabel', font=('Arial', 19, 'bold'))
-        style.configure('Subtitle.TLabel', font=('Arial', 10), foreground='#587076')
-        style.configure('Title.TLabel', font=('Arial', 10, 'bold'))
-        style.configure('TButton', padding=(6, 4))
-        style.configure('Start.TButton', background='#236e69', foreground='white', font=('Arial', 10, 'bold'))
-        style.map('Start.TButton', background=[('active', '#18534e'), ('disabled', '#a1adab')])
-        style.configure('Treeview', rowheight=25, background='white', fieldbackground='white')
-        style.configure('Treeview.Heading', font=('Arial', 9, 'bold'))
-        style.configure('Horizontal.TProgressbar', background='#3f948b')
+        apply_theme(self, self.theme_mode.get())
+
+    def _apply_theme(self):
+        palette = apply_theme(self, self.theme_mode.get())
+        self.form_canvas.configure(bg=palette['bg'])
+        self.log_text.configure(bg=palette['surface'], fg=palette['fg'],
+                                insertbackground=palette['fg'],
+                                selectbackground=palette['selected'])
+        for tag in ('verified_tower', 'estimated_only', 'placement_candidate', 'error'):
+            key = {'verified_tower': 'verified', 'estimated_only': 'estimated',
+                   'placement_candidate': 'candidate', 'error': 'error'}[tag]
+            self.grid.tag_configure(tag, foreground=palette[key])
+
+    def _change_theme(self, _event=None):
+        self.theme_mode.set('light' if self.theme_display.get() == self.t('theme_light') else 'dark')
+        self._apply_theme()
+
+    def _install_hover(self):
+        for mode, widget in self.mode_widgets.items():
+            self._hover.attach(widget, lambda m=mode:
+                               hover_text(self.language.get(), 'modes', m))
+        for field, group in self.groups.items():
+            description = lambda f=field: hover_text(self.language.get(), 'fields', f)
+            for widget in group.winfo_children():
+                self._hover.attach(widget, description)
+                for child in widget.winfo_children():
+                    self._hover.attach(child, description)
+        self._hover.attach(self.theme_combo, lambda:
+                           '切換深色或淺色外觀' if self.language.get() == 'zh-TW'
+                           else 'Switch dark/light appearance')
+
+    def _install_form_scrolling(self):
+        def bind(widget):
+            widget.bind('<MouseWheel>', self._scroll_form, add='+')
+            widget.bind('<Button-4>', self._scroll_form, add='+')
+            widget.bind('<Button-5>', self._scroll_form, add='+')
+            for child in widget.winfo_children():
+                bind(child)
+        bind(self.form_canvas)
+        self.bind('<Configure>', self._resize_form_viewport, add='+')
+        self.after_idle(self._resize_form_viewport)
+
+    def _scroll_form(self, event):
+        if self.form_canvas.yview() == (0.0, 1.0):
+            return None
+        if getattr(event, 'num', None) == 4:
+            amount = -3
+        elif getattr(event, 'num', None) == 5:
+            amount = 3
+        else:
+            delta = getattr(event, 'delta', 0)
+            if delta == 0:
+                return None
+            amount = (-3 if delta > 0 else 3)
+        self.form_canvas.yview_scroll(amount, 'units')
+        return 'break'
+
+    def _resize_form_viewport(self, event=None):
+        if event is not None and getattr(event, 'widget', self) is not self:
+            return
+        if not getattr(self, 'form_visible', False):
+            return
+        size = max(170, min(420, self.winfo_height() - 430, self.form.winfo_reqheight() + 12))
+        if str(self.form_canvas.cget('height')) != str(size):
+            self.form_canvas.configure(height=size)
+        self._resize_form_scroll()
+
+    def _update_height_note(self):
+        if not hasattr(self, 'height_note'):
+            return
+        self.height_note.configure(text=height_note(
+            self.language.get(), self.mode.get(), self.vars['height_engine'].get(),
+            self.vars['scan_strategy'].get(), self.vars['max_y'].get(),
+            self.vars['center_y_below'].get()))
 
     def _build(self):
         root = ttk.Frame(self, padding=10)
@@ -88,13 +154,14 @@ class App(tk.Tk):
         top.pack(fill='x')
         self.mode_label = ttk.Label(top, style='Title.TLabel')
         self.mode_label.pack(side='left', padx=(0, 12))
-        mode_rows = tuple(ttk.Frame(top) for _ in range((len(MODES) + 1) // 2))
-        for mode_row in mode_rows:
-            mode_row.pack(fill='x')
+        mode_panel = ttk.Frame(top)
+        mode_panel.pack(side='left', fill='x')
+        mode_panel.columnconfigure(0, minsize=205)
+        mode_panel.columnconfigure(1, minsize=250)
         for index, (key, _label) in enumerate(MODES):
-            widget = ttk.Radiobutton(mode_rows[index // 2], value=key,
+            widget = ttk.Radiobutton(mode_panel, value=key,
                                      variable=self.mode, command=self._set_mode)
-            widget.pack(side='left', padx=(0, 18), anchor='w')
+            widget.grid(row=index // 2, column=index % 2, sticky='w', padx=(0, 8), pady=1)
             self.mode_widgets[key] = widget
         locale = ttk.Frame(root)
         locale.pack(fill='x', pady=(9, 0))
@@ -104,6 +171,14 @@ class App(tk.Tk):
                                            values=('zh-TW', 'en-US'), width=12)
         self.language_combo.pack(side='left')
         self.language_combo.bind('<<ComboboxSelected>>', self._apply_language)
+        self.theme_label = ttk.Label(locale, style='Subtitle.TLabel')
+        self.theme_label.pack(side='left', padx=(18, 7))
+        self.theme_display = tk.StringVar(value=self.t('theme_dark'))
+        self.theme_combo = ttk.Combobox(locale, textvariable=self.theme_display,
+                                        state='readonly', width=9,
+                                        values=(self.t('theme_dark'), self.t('theme_light')))
+        self.theme_combo.pack(side='left')
+        self.theme_combo.bind('<<ComboboxSelected>>', self._change_theme)
         self.form_visible = True
         self.toggle_form_btn = ttk.Button(locale, command=self._toggle_form)
         self.toggle_form_btn.pack(side='right')
@@ -111,7 +186,7 @@ class App(tk.Tk):
         form_container = ttk.Frame(root)
         form_container.pack(fill='x')
         self.form_container = form_container
-        self.form_canvas = tk.Canvas(form_container, height=154, highlightthickness=0,
+        self.form_canvas = tk.Canvas(form_container, height=305, highlightthickness=0,
                                      bg='#f4f7f7', borderwidth=0)
         form_scroll = ttk.Scrollbar(form_container, orient='vertical',
                                      command=self.form_canvas.yview)
@@ -137,8 +212,11 @@ class App(tk.Tk):
             self.vars[name] = tk.StringVar(value=value)
         self.vars['eula_accepted'] = tk.BooleanVar(value=False)
         self.vars['resume'] = tk.BooleanVar(value=False)
+        self.vars['nearest_only'] = tk.BooleanVar(value=True)
+        self.vars['max_y'].trace_add('write', lambda *_: self._update_height_note())
+        self.vars['center_y_below'].trace_add('write', lambda *_: self._update_height_note())
         fields = ('version', 'seed', 'radius', 'center_x', 'center_z', 'world', 'candidates', 'max_y',
-                  'top', 'center_y_below', 'core_archive', 'game_jar', 'server_jar', 'java', 'memory', 'startup_timeout',
+                  'top', 'nearest_only', 'center_y_below', 'core_archive', 'game_jar', 'server_jar', 'java', 'memory', 'startup_timeout',
                   'eula_accepted', 'priority', 'sort_by', 'scan_strategy', 'scan_engine', 'height_engine', 'batch_regions', 'cpu_rest_ms', 'threads', 'resume',
                   'limit', 'offset', 'timeout', 'port', 'password', 'out')
         for row_index, field in enumerate(fields):
@@ -148,8 +226,10 @@ class App(tk.Tk):
             label = ttk.Label(line, width=31)
             label.pack(side='left')
             self.field_widgets[field] = label
-            if field in ('eula_accepted', 'resume'):
-                widget = ttk.Checkbutton(line, variable=self.vars[field])
+            if field in ('eula_accepted', 'resume', 'nearest_only'):
+                widget = ttk.Checkbutton(line, variable=self.vars[field],
+                                         command=(lambda: self._set_mode(reset_output=False))
+                                         if field == 'nearest_only' else None)
                 widget.pack(side='left', anchor='w')
             elif field == 'sort_by':
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
@@ -159,6 +239,7 @@ class App(tk.Tk):
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
                                       values=('nearest', 'exhaustive'), width=21)
                 widget.pack(side='left', fill='x', expand=True, padx=(0, 6))
+                widget.bind('<<ComboboxSelected>>', lambda _e: self._set_mode(reset_output=False))
             elif field == 'scan_engine':
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
                                       values=('auto', 'python', 'native'), width=21)
@@ -167,6 +248,7 @@ class App(tk.Tk):
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
                                       values=('placement', 'estimate'), width=21)
                 widget.pack(side='left', fill='x', expand=True, padx=(0, 6))
+                widget.bind('<<ComboboxSelected>>', lambda _e: self._set_mode(reset_output=False))
             elif field == 'priority':
                 widget = ttk.Combobox(line, textvariable=self.vars[field], state='readonly',
                                       values=('near-origin', 'terrain'), width=21)
@@ -198,6 +280,8 @@ class App(tk.Tk):
                 elif field == 'server_jar':
                     self.browse_widgets[field] = ttk.Button(line, command=self._browse_server_jar)
                     self.browse_widgets[field].pack(side='left')
+        self.height_note = ttk.Label(root, text='', wraplength=1000, justify='left', style='Hint.TLabel')
+        self.height_note.pack(fill='x', pady=(4, 1))
         self.tips = ttk.Label(root, text='', wraplength=1000, justify='left', style='Subtitle.TLabel')
         self.tips.pack(fill='x', pady=(10, 7))
         # Two toolbar rows remain usable on 810px laptops and with Windows fonts.
@@ -261,7 +345,7 @@ class App(tk.Tk):
     def _set_mode(self, *, reset_output: bool = True):
         mode = self.mode.get()
         visibility = {
-            'candidates': {'version', 'seed', 'radius', 'center_x', 'center_z', 'out'},
+            'candidates': {'version', 'seed', 'radius', 'center_x', 'center_z', 'nearest_only', 'top', 'out'},
             'full-map': {'version', 'seed', 'center_x', 'center_z', 'top', 'height_engine', 'max_y', 'scan_strategy', 'scan_engine',
                          'batch_regions', 'cpu_rest_ms', 'threads', 'resume', 'out'},
             'seed-geometry': {'version', 'seed', 'radius', 'center_x', 'center_z', 'game_jar', 'out'},
@@ -274,6 +358,13 @@ class App(tk.Tk):
                              'startup_timeout', 'eula_accepted', 'priority', 'core_archive', 'game_jar',
                              'limit', 'offset', 'timeout', 'max_y', 'center_y_below', 'sort_by', 'out'},
         }
+        if mode == 'candidates' and not self.vars['nearest_only'].get():
+            visibility[mode].discard('top')
+        if mode == 'full-map' and self.vars['height_engine'].get() != 'estimate':
+            visibility[mode].discard('max_y')
+        if mode == 'full-map' and self.vars['height_engine'].get() == 'estimate':
+            if not self.vars['max_y'].get().strip():
+                self.vars['max_y'].set('-37')
         for key, widget in self.groups.items():
             widget.pack_forget()
             if key in visibility[mode]:
@@ -283,6 +374,9 @@ class App(tk.Tk):
             self.vars['version'].set('1.21.8')
             if not self.vars['max_y'].get().strip():
                 self.vars['max_y'].set('64')
+        elif mode == 'full-map' and self.vars['height_engine'].get() == 'estimate':
+            self.version_combo.configure(values=['1.21.8'])
+            self.vars['version'].set('1.21.8')
         elif mode in ('candidates', 'seed-vanilla', 'seed-geometry', 'full-map'):
             self.version_combo.configure(values=[v.id for v in VERSIONS])
             if self.vars['version'].get() == 'auto':
@@ -295,8 +389,22 @@ class App(tk.Tk):
             stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
             self.vars['out'].set(str(PROJECT_ROOT / 'results' / f'{mode}-{stamp}.csv'))
         self.tips.configure(text=self.t('tip_' + mode))
-        self.field_widgets['top'].configure(text=self.t('field_top_nearest') if mode == 'full-map' else self.t('field_top'))
+        if mode == 'full-map' and self.vars['height_engine'].get() == 'estimate':
+            top_key = 'field_top_estimate_nearest' if self.vars['scan_strategy'].get() == 'nearest' else 'field_top_estimate_exhaustive'
+            y_key = 'field_max_y_center' if self.vars['scan_strategy'].get() == 'nearest' else 'field_max_y_base'
+        else:
+            top_key = ('field_top_nearest' if mode == 'full-map' else
+                       'field_top_candidates' if mode == 'candidates' else 'field_top')
+            y_key = 'field_max_y'
+        self.field_widgets['top'].configure(text=self.t(top_key))
+        self.field_widgets['max_y'].configure(text=self.t(y_key))
+        self._update_height_note()
+        if self.height_note.cget('text'):
+            self.height_note.pack(fill='x', before=self.tips, pady=(4, 1))
+        else:
+            self.height_note.pack_forget()
         self.form_canvas.yview_moveto(0.0)
+        self.after_idle(self._resize_form_viewport)
         self._resize_form_scroll()
 
     def _apply_language(self, _event=None):
@@ -319,6 +427,9 @@ class App(tk.Tk):
             widget.configure(text=self.t(key))
         self.results_tabs.tab(0, text=self.t('tab_results'))
         self.results_tabs.tab(1, text=self.t('tab_logs'))
+        self.theme_label.configure(text=self.t('theme'))
+        self.theme_combo.configure(values=(self.t('theme_dark'), self.t('theme_light')))
+        self.theme_display.set(self.t('theme_light' if self.theme_mode.get() == 'light' else 'theme_dark'))
         self._set_mode(reset_output=False)
         for child in self.winfo_children():
             if isinstance(child, AdvancedWindow):
@@ -350,7 +461,9 @@ class App(tk.Tk):
         window.minsize(420, 330)
         frame = ttk.Frame(window, padding=15)
         frame.pack(fill='both', expand=True)
-        text_box = tk.Text(frame, wrap='word', font=('Arial', 11), padx=12, pady=12)
+        palette = PALETTES[self.theme_mode.get()]
+        text_box = tk.Text(frame, wrap='word', font=('Arial', 11), padx=12, pady=12,
+                           bg=palette['surface'], fg=palette['fg'], insertbackground=palette['fg'])
         text_box.pack(side='left', fill='both', expand=True)
         scrollbar = ttk.Scrollbar(frame, orient='vertical', command=text_box.yview)
         scrollbar.pack(side='right', fill='y')
@@ -466,6 +579,8 @@ class App(tk.Tk):
             self._log(self.t('not_running_log'))
 
     def destroy(self):
+        if hasattr(self, '_hover'):
+            self._hover.hide()
         timer = getattr(self, '_poll_id', None)
         if timer is not None:
             try:
@@ -502,6 +617,16 @@ class App(tk.Tk):
                 self.progress.configure(mode='determinate', maximum=total, value=current)
                 self.banner.set(self.t('banner_fullmap_progress', checked=f'{current:,}',
                                        total=f'{total:,}', matched=f'{matched:,}'))
+            return
+        estimated = re.match(r'^FULLMAP_ESTIMATE_PROGRESS (\d+) (\d+|ring) (\d+) ([a-z_]+)', line.strip())
+        if estimated:
+            checked, total, matched, status = estimated.groups()
+            if total != 'ring' and int(total) > 0:
+                self.progress.stop()
+                self.progress.configure(mode='determinate', maximum=int(total), value=int(checked))
+                self.banner.set(self.t('banner_estimated_progress', checked=checked, total=total, matched=matched))
+            else:
+                self.banner.set(self.t('banner_estimated_rings', rings=checked, matched=matched))
             return
         match = re.match(r'^\[(\d+)/(\d+)\]', line.strip())
         if match is None:
