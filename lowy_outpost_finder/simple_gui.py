@@ -396,6 +396,9 @@ class SimpleApp(tk.Tk):
         self._setup_timer = None
         if self._setup_active or self._busy or self._closing:
             return
+        # A prior stopped search may have set this event. A deliberate retry
+        # must start with a fresh cancellation state.
+        self.cancel_event.clear()
         self._setup_active = True
         self._ready = False
         self.search_btn.configure(state='disabled')
