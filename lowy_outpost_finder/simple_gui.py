@@ -298,7 +298,10 @@ class SimpleApp(tk.Tk):
                 widget.configure(bg=palette['bg'],
                                  fg=palette['muted'] if getattr(widget, '_muted', False)
                                  else palette['fg'])
-            if isinstance(widget, tk.Entry):
+            # ttk.Entry / ttk.Combobox inherit from tk.Entry in Python, but
+            # reject classic Tk options such as -bg and -insertbackground.
+            # ttk widgets are styled through ttk.Style above instead.
+            if type(widget) is tk.Entry:
                 widget.configure(bg=palette['surface'], fg=palette['fg'],
                                  insertbackground=palette['fg'],
                                  highlightbackground=palette['border'],
