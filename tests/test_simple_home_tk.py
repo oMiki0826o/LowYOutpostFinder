@@ -45,6 +45,13 @@ class SimpleHomeTkTests(unittest.TestCase):
         app._toggle_theme()
         self.assertEqual(app.cget('background'), '#ffffff')
 
+    def test_missing_toolchain_message_has_chinese_guidance(self):
+        app = self.app
+        message = app._explain_bootstrap_error('Missing cmake. Please install it.')
+        self.assertIn('編譯', message)
+        self.assertIn('CMake', message)
+        self.assertIn('macOS', message)
+
     def test_window_destroy_removes_poll_timer_without_error(self):
         app = self.app
         poll = app._poll_id
