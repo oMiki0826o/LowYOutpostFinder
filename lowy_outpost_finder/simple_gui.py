@@ -260,6 +260,7 @@ class SimpleApp(tk.Tk):
         self.log_text.pack(fill='both', expand=True)
         self.note_label = self._label(self.body, self.t('note'), 9, muted=True,
                                       fill='x', pady=(9, 1))
+        self.note_label.configure(wraplength=900, justify='left')
         self._open_windows = []
 
     def _apply_theme(self):
