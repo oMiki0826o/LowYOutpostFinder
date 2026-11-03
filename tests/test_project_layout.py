@@ -49,7 +49,7 @@ class ProjectLayoutTests(unittest.TestCase):
 
     def test_launcher_delegates_to_package_gui(self) -> None:
         launcher = importlib.import_module("LowYOutpostFinder")
-        with patch("lowy_outpost_finder.gui.main", return_value=None) as gui_main:
+        with patch("lowy_outpost_finder.simple_gui.main", return_value=None) as gui_main:
             self.assertIsNone(launcher.main())
         gui_main.assert_called_once_with()
 
