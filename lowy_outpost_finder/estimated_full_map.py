@@ -286,17 +286,23 @@ def scan_estimated_nearest(cfg: EstimatedScanConfig, out: Path, *, resume: bool 
                  "retained": [], "status": "incomplete", "bounds": {"x_min": cfg.x_min,
                  "x_max": cfg.x_max, "z_min": cfg.z_min, "z_max": cfg.z_max}}
         _atomic_json(state_path, state)
+    cr, cz = cfg.center_x // 512, cfg.center_z // 512
+    max_ring = max(abs(grid.rx_min-cr), abs(grid.rx_max-cr),
+                   abs(grid.rz_min-cz), abs(grid.rz_max-cz))
     batches = 0
-    while len(rows) < cfg.top and (max_batches == 0 or batches < max_batches):
+    while (len(rows) < cfg.top and state["processed_rings"] <= max_ring
+           and (max_batches == 0 or batches < max_batches)):
+        rings = min(cfg.batch_regions, 512, max_ring - state["processed_rings"] + 1)
         native_rows, matches, biome_passes, passes, next_ring, stopped, model = scan_native_strict_nearest(
-            grid, cfg, state["processed_rings"], min(cfg.batch_regions, 512), cfg.top - len(rows), Path(binary))
+            grid, cfg, state["processed_rings"], rings, cfg.top - len(rows), Path(binary))
         rows.extend(native_rows)
         state.update(processed_rings=next_ring,
                      placement_candidates=state["placement_candidates"] + matches,
                      estimated_biome_passes=state.get("estimated_biome_passes", 0) + biome_passes,
                      estimated_height_passes=state["estimated_height_passes"] + passes,
                      model_fingerprint=model, outpost_asset_model=OUTPOST_ASSET_MODEL, retained=rows,
-                     status="complete_estimated_only" if stopped else "incomplete")
+                     status=("complete_estimated_only" if stopped else
+                             "exhausted_estimated_only" if next_ring > max_ring else "incomplete"))
         _atomic_json(state_path, state)
         write_csv(out, _strict_rows(rows, cfg), STRICT_FIELDS)
         batches += 1
