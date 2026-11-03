@@ -48,10 +48,12 @@ def apply_theme(root: tk.Misc, mode: str) -> dict[str, str]:
                     foreground=fg, bordercolor=palette['border'])
     style.map('TButton', background=[('active', palette['selected'])],
               foreground=[('disabled', muted)])
+    start_foreground = '#000000' if mode == 'dark' else '#ffffff'
     style.configure('Start.TButton', padding=(7, 5),
-                    background=palette['accent'], foreground='#ffffff',
+                    background=palette['accent'], foreground=start_foreground,
                     font=('Arial', 10, 'bold'))
-    style.map('Start.TButton', background=[('active', palette['selected'])])
+    style.map('Start.TButton', background=[('active', palette['selected'])],
+              foreground=[('active', start_foreground), ('disabled', palette['muted'])])
     style.configure('TEntry', fieldbackground=surface, foreground=fg,
                     bordercolor=palette['border'])
     style.configure('TCombobox', fieldbackground=surface, foreground=fg,
