@@ -24,6 +24,7 @@ class ProcessControlTests(unittest.TestCase):
             stop_scanner(process)
         kill_group.assert_called_once_with(9876, signal.SIGTERM)
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX process-group contract')
     def test_already_gone_process_is_safe(self):
         process = MagicMock(spec=subprocess.Popen)
         process.pid = 9876
@@ -34,6 +35,17 @@ class ProcessControlTests(unittest.TestCase):
                     kill_group.side_effect = ProcessLookupError()
                     stop_scanner(process)
                     child.assert_not_called()
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows taskkill tree contract')
+    def test_windows_stop_terminates_entire_tree(self):
+        process = MagicMock(spec=subprocess.Popen)
+        process.pid = 1234
+        process.poll.return_value = None
+        with patch('lowy_outpost_finder.process_control.subprocess.run') as terminate_tree:
+            terminate_tree.return_value.returncode = 0
+            stop_scanner(process)
+            command = terminate_tree.call_args.args[0]
+            self.assertEqual(command, ['taskkill', '/PID', '1234', '/T', '/F'])
 
 
 if __name__ == '__main__':
