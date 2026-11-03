@@ -118,5 +118,5 @@ class TkVisualIntegrationTests(TestCase):
 
     def test_scroll_and_hover_bindings_exist(self):
         app = self.app
-        self.assertIn('MouseWheel', app.form_canvas.bind())
-        self.assertIn('Enter', app.mode_widgets['candidates'].bind())
+        self.assertIn('<MouseWheel>', app.form_canvas.bind())
+        self.assertIn('<Enter>', app.mode_widgets['candidates'].bind())
