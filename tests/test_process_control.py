@@ -19,6 +19,7 @@ class ProcessControlTests(unittest.TestCase):
     def test_stop_terminates_process_group_not_only_python_parent(self):
         process = MagicMock(spec=subprocess.Popen)
         process.pid = 9876
+        process.poll.return_value = None
         with patch('lowy_outpost_finder.process_control.os.killpg') as kill_group:
             stop_scanner(process)
         kill_group.assert_called_once_with(9876, signal.SIGTERM)
@@ -26,6 +27,7 @@ class ProcessControlTests(unittest.TestCase):
     def test_already_gone_process_is_safe(self):
         process = MagicMock(spec=subprocess.Popen)
         process.pid = 9876
+        process.poll.return_value = None
         with patch('lowy_outpost_finder.process_control.os.killpg') as kill_group:
             with patch('lowy_outpost_finder.process_control.subprocess.run') as child:
                 with patch('lowy_outpost_finder.process_control.os.name', 'posix'):
