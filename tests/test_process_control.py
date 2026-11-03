@@ -4,6 +4,9 @@ import signal
 import subprocess
 import unittest
 from unittest.mock import MagicMock, patch
+from threading import Event
+
+from lowy_outpost_finder.native_bootstrap import _command, BootstrapError
 
 from lowy_outpost_finder.process_control import launch_scanner, stop_scanner
 
@@ -35,6 +38,23 @@ class ProcessControlTests(unittest.TestCase):
                     kill_group.side_effect = ProcessLookupError()
                     stop_scanner(process)
                     child.assert_not_called()
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX native compiler cancellation')
+    def test_cancelled_first_run_compilation_stops_child_process_group(self):
+        process = MagicMock(spec=subprocess.Popen)
+        process.pid = 9123
+        process.poll.return_value = None
+        process.communicate.side_effect = [
+            subprocess.TimeoutExpired('cmake', 0.4),
+        ]
+        stop = Event()
+        stop.set()
+        with patch('lowy_outpost_finder.native_bootstrap.subprocess.Popen',
+                   return_value=process):
+            with patch('lowy_outpost_finder.process_control.os.killpg') as kill_group:
+                with self.assertRaisesRegex(BootstrapError, 'cancelled'):
+                    _command(['cmake', '--version'], cancel_event=stop)
+                kill_group.assert_called_once_with(9123, signal.SIGTERM)
 
     @unittest.skipUnless(os.name == 'nt', 'Windows taskkill tree contract')
     def test_windows_stop_terminates_entire_tree(self):
