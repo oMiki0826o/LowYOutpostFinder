@@ -189,8 +189,9 @@ class SimpleApp(tk.Tk):
                                        anchor='w')
         self.subtitle_label = self._label(headline, self.t('subtitle'), 10,
                                           muted=True, anchor='w', pady=(5, 0))
-        self.settings_btn = tk.Button(header, text='☷', width=3, font=('Arial', 20),
-                                      relief='flat', bd=0, command=self._open_settings)
+        self.settings_btn = ttk.Button(header, text='☷  ' + self.t('settings'),
+                                       style='MonoIcon.TButton', width=12,
+                                       command=self._open_settings)
         self.settings_btn.pack(side='right', anchor='n')
 
         self.form = tk.Frame(self.body)
@@ -217,18 +218,17 @@ class SimpleApp(tk.Tk):
         summary.pack(fill='x', pady=(15, 8))
         self.center_label = self._label(summary, self.t('center'), 10,
                                          muted=True, side='left')
-        self.advanced_link = tk.Button(
-            summary, text=self.t('advanced') + '  ›', relief='flat',
-            command=self._open_settings, borderwidth=0)
+        self.advanced_link = ttk.Button(
+            summary, text=self.t('advanced') + '  ›',
+            style='MonoLink.TButton', command=self._open_settings)
         self.advanced_link.pack(side='right')
-        self.search_btn = tk.Button(self.body, text=self.t('search'),
-                                    font=('Arial', 12, 'bold'), relief='flat',
-                                    command=self._start_search, state='disabled',
-                                    padx=10, pady=12, borderwidth=0)
+        self.search_btn = ttk.Button(self.body, text=self.t('search'),
+                                     style='MonoPrimary.TButton',
+                                     command=self._start_search, state='disabled')
         self.search_btn.pack(fill='x', pady=(10, 8))
-        self.stop_btn = tk.Button(self.body, text=self.t('stop'), font=('Arial', 10),
-                                  relief='flat', command=self._stop_search,
-                                  state='disabled', pady=6, borderwidth=0)
+        self.stop_btn = ttk.Button(self.body, text=self.t('stop'),
+                                   style='MonoSecondary.TButton',
+                                   command=self._stop_search, state='disabled')
         self.stop_btn.pack(fill='x', pady=(0, 9))
         self.engine_status = self._label(self.body, self.t('not_ready'), 10,
                                          muted=True, fill='x', pady=(0, 4))
@@ -241,9 +241,9 @@ class SimpleApp(tk.Tk):
         result_header.pack(fill='x', pady=(2, 7))
         self.result_heading = self._label(result_header, self.t('results'), 13,
                                           bold=True, side='left')
-        self.export_btn = tk.Button(result_header, text=self.t('export'),
-                                    relief='flat', borderwidth=0,
-                                    command=self._export_csv, state='disabled')
+        self.export_btn = ttk.Button(result_header, text=self.t('export'),
+                                     style='MonoSecondary.TButton',
+                                     command=self._export_csv, state='disabled')
         self.export_btn.pack(side='right')
         self.notebook = ttk.Notebook(self.body)
         self.notebook.pack(fill='both', expand=True)
@@ -296,6 +296,39 @@ class SimpleApp(tk.Tk):
               foreground=[('selected', palette['fg'])])
         s.configure('Horizontal.TProgressbar', background=palette['fg'],
                     troughcolor=palette['raised'], borderwidth=0)
+        # Aqua tk.Button can ignore requested -bg/-fg and draw a white native
+        # bezel with white text. Use themed buttons on the explicit clam theme
+        # with mapped contrast for every relevant state.
+        primary_disabled_bg = '#292929' if self.theme_mode == 'dark' else '#dddddd'
+        primary_disabled_fg = '#aaaaaa' if self.theme_mode == 'dark' else '#555555'
+        primary_active_bg = '#dedede' if self.theme_mode == 'dark' else '#333333'
+        secondary_disabled_fg = '#858585' if self.theme_mode == 'dark' else '#666666'
+        for name, bg, fg, padding, font in (
+            ('MonoPrimary.TButton', palette['button'], palette['button_fg'],
+             (12, 12), ('Arial', 12, 'bold')),
+            ('MonoSecondary.TButton', palette['raised'], palette['fg'],
+             (12, 8), ('Arial', 10)),
+            ('MonoIcon.TButton', palette['bg'], palette['fg'],
+             (8, 6), ('Arial', 11, 'bold')),
+            ('MonoLink.TButton', palette['bg'], palette['fg'],
+             (8, 5), ('Arial', 10)),
+        ):
+            s.configure(name, background=bg, foreground=fg, padding=padding,
+                        font=font, relief='flat', borderwidth=0,
+                        focusthickness=1, focuscolor=palette['fg'])
+            is_primary = name == 'MonoPrimary.TButton'
+            s.map(name,
+                  background=[
+                      ('disabled', primary_disabled_bg if is_primary else palette['bg']),
+                      ('pressed', primary_active_bg if is_primary else palette['selected']),
+                      ('active', primary_active_bg if is_primary else palette['selected']),
+                  ],
+                  foreground=[
+                      ('disabled', primary_disabled_fg if is_primary else secondary_disabled_fg),
+                      ('pressed', palette['button_fg'] if is_primary else palette['fg']),
+                      ('active', palette['button_fg'] if is_primary else palette['fg']),
+                  ])
+
         self.tree.tag_configure('estimated_only', foreground=palette['muted'])
         self.configure(bg=palette['bg'])
 
@@ -314,15 +347,8 @@ class SimpleApp(tk.Tk):
                                  insertbackground=palette['fg'],
                                  highlightbackground=palette['border'],
                                  highlightcolor=palette['fg'])
-            if isinstance(widget, tk.Button):
-                primary = widget is self.search_btn
-                widget.configure(
-                    bg=palette['button'] if primary else palette['bg'],
-                    fg=palette['button_fg'] if primary else palette['fg'],
-                    activebackground=palette['selected'] if not primary else palette['muted'],
-                    activeforeground=palette['fg'] if not primary else palette['button_fg'],
-                    disabledforeground=palette['muted'],
-                    highlightbackground=palette['bg'])
+            # All clickable controls are ttk.Button and use the styles above.
+            # Never invoke native tk.Button colour settings on macOS.
             if isinstance(widget, tk.Text):
                 widget.configure(bg=palette['surface'], fg=palette['fg'],
                                  insertbackground=palette['fg'],
@@ -339,7 +365,7 @@ class SimpleApp(tk.Tk):
             lab.configure(text=self.t(key))
         self.center_label.configure(text=self.t('center'))
         self.advanced_link.configure(text=self.t('advanced') + '  ›')
-        self.settings_btn.configure(text='☷')
+        self.settings_btn.configure(text='☷  ' + self.t('settings'))
         self.search_btn.configure(text=self.t('search'))
         self.stop_btn.configure(text=self.t('stop'))
         self.result_heading.configure(text=self.t('results'))
@@ -368,24 +394,22 @@ class SimpleApp(tk.Tk):
             (self.t('language'), lambda: (panel.destroy(), self._toggle_language())),
         ]
         for label, action in controls:
-            tk.Button(frame, text=label, command=action, anchor='w',
-                      padx=12, pady=7).pack(fill='x', pady=2)
+            ttk.Button(frame, text=label, command=action,
+                       style='MonoSecondary.TButton').pack(fill='x', pady=2)
         tk.Label(frame, text=self.t('advanced'), anchor='w',
                  font=('Arial', 13, 'bold')).pack(fill='x', pady=(17, 7))
         for mode in ADVANCED_MODES:
-            tk.Button(frame, text=self.t('mode_' + mode), anchor='w',
-                      command=lambda m=mode: self._open_advanced(m),
-                      padx=12, pady=3).pack(fill='x', pady=1)
+            ttk.Button(frame, text=self.t('mode_' + mode),
+                       style='MonoSecondary.TButton',
+                       command=lambda m=mode: self._open_advanced(m)).pack(fill='x', pady=1)
         colors = DARK if self.theme_mode == 'dark' else LIGHT
         panel.configure(bg=colors['bg'])
         frame.configure(bg=colors['bg'])
         for child in frame.winfo_children():
             if isinstance(child, tk.Label):
                 child.configure(bg=colors['bg'], fg=colors['fg'])
-            elif isinstance(child, tk.Button):
-                child.configure(bg=colors['raised'], fg=colors['fg'],
-                                activebackground=colors['selected'],
-                                activeforeground=colors['fg'], relief='flat')
+            # Themed buttons inherit the monochrome ttk styles; classic
+            # button colors are intentionally never used on macOS Aqua.
         self._open_windows.append(panel)
 
     def _open_advanced(self, mode: str):
