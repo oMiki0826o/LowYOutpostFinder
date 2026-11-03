@@ -46,6 +46,7 @@ class ProcessControlTests(unittest.TestCase):
         process.poll.return_value = None
         process.communicate.side_effect = [
             subprocess.TimeoutExpired('cmake', 0.4),
+            ('', None),
         ]
         stop = Event()
         stop.set()
