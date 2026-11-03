@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from lowy_outpost_finder.simple_workflow import SimpleRequest, build_search_arguments, export_results
-from lowy_outpost_finder.native_bootstrap import BootstrapError, ensure_native_estimator
+from lowy_outpost_finder.native_bootstrap import BootstrapError, ensure_native_estimator, estimator_available
 
 
 class SimpleWorkflowTests(unittest.TestCase):
@@ -106,9 +106,27 @@ class NativeBootstrapTests(unittest.TestCase):
             exe.write_bytes(b'scanner')
             exe.chmod(0o755)
             with patch('lowy_outpost_finder.native_bootstrap.subprocess.run') as run:
+                run.return_value.returncode = 0
+                run.return_value.stdout = (
+                    '{"model_fingerprint":"lowyswamphut-approx-1.21.8-centre-strict-single-sample",'
+                    '"matches":1,"next_ring":1,"rows":[]}')
                 actual = ensure_native_estimator(native_path=exe)
             self.assertEqual(actual, exe)
-            run.assert_not_called()
+            run.assert_called_once()
+
+    def test_incompatible_native_binary_is_not_marked_available(self):
+        with tempfile.TemporaryDirectory() as td:
+            exe = Path(td) / 'outpost_estimate'
+            exe.write_bytes(b'old incompatible native binary')
+            exe.chmod(0o755)
+            with patch('lowy_outpost_finder.native_bootstrap.subprocess.run') as run:
+                run.return_value.returncode = 0
+                run.return_value.stdout = 'some program: --help'
+                self.assertFalse(estimator_available(exe))
+                run.return_value.stdout = '{"model_fingerprint":"unexpected"}'
+                self.assertFalse(estimator_available(exe))
+                run.side_effect = OSError('bad executable format')
+                self.assertFalse(estimator_available(exe))
 
     def test_missing_required_compiler_gives_actionable_error(self):
         with tempfile.TemporaryDirectory() as td:
