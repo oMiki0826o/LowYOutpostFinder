@@ -5,7 +5,7 @@ import tkinter as tk
 import unittest
 from unittest.mock import patch
 
-from lowy_outpost_finder.simple_gui import SimpleApp, PUBLIC_FIELDS
+from lowy_outpost_finder.simple_gui import SimpleApp, PUBLIC_FIELDS, is_classic_entry
 from lowy_outpost_finder.gui import App as LegacyApp
 
 
@@ -30,7 +30,8 @@ class SimpleHomeTkTests(unittest.TestCase):
         self.assertTrue(issubclass(ttk.Combobox, tk.Entry))
         app = self.app
         self.assertIsInstance(app.version_field, ttk.Combobox)
-        self.assertNotIsInstance(app.version_field, type(app.seed_field))
+        self.assertFalse(is_classic_entry(app.version_field))
+        self.assertTrue(is_classic_entry(app.seed_field))
         # Both initial theming and toggling must remain safe on real Tk.
         app._apply_theme()
         app._toggle_theme()
