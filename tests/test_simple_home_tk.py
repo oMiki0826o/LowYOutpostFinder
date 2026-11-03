@@ -57,6 +57,7 @@ class SimpleHomeTkTests(unittest.TestCase):
     def test_legacy_window_cancelled_resize_does_not_access_destroyed_form(self):
         advanced = LegacyApp()
         try:
+            self.assertEqual(advanced.cget('background'), '#000000')
             advanced._schedule_form_resize()
             self.assertIsNotNone(advanced._layout_after)
             advanced.destroy()
