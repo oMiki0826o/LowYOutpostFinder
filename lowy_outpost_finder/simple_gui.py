@@ -15,6 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from .native_bootstrap import BootstrapError, ensure_native_estimator
 from .paths import PROJECT_ROOT, cli_command
+from .process_control import launch_scanner, stop_scanner
 from .simple_workflow import (
     PUBLIC_FIELDS, SimpleRequest, build_search_arguments, export_results,
     unique_output_paths,
@@ -452,7 +453,7 @@ class SimpleApp(tk.Tk):
                        raw: Path, public: Path) -> None:
         try:
             raw.parent.mkdir(parents=True, exist_ok=True)
-            process = subprocess.Popen(
+            process = launch_scanner(
                 cli_command(*argv), cwd=PROJECT_ROOT,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding='utf-8', errors='replace', bufsize=1,
@@ -460,11 +461,11 @@ class SimpleApp(tk.Tk):
             self.process = process
             assert process.stdout is not None
             if self.cancel_event.is_set():
-                process.terminate()
+                stop_scanner(process)
             for line in process.stdout:
                 self.events.put(('log', line.rstrip()))
                 if self.cancel_event.is_set() and process.poll() is None:
-                    process.terminate()
+                    stop_scanner(process)
             code = process.wait()
             if self.cancel_event.is_set():
                 self.events.put(('cancelled',))
@@ -482,7 +483,7 @@ class SimpleApp(tk.Tk):
     def _stop_search(self):
         self.cancel_event.set()
         if self.process is not None and self.process.poll() is None:
-            self.process.terminate()
+            stop_scanner(self.process)
         self.stop_btn.configure(state='disabled')
 
     def _append_log(self, line: str):
@@ -604,7 +605,7 @@ class SimpleApp(tk.Tk):
                 pass
             self._poll_id = None
         if self.process is not None and self.process.poll() is None:
-            self.process.terminate()
+            stop_scanner(self.process)
         for window in self._open_windows:
             try:
                 if window.winfo_exists():
