@@ -44,6 +44,47 @@ class SimpleHomeTkTests(unittest.TestCase):
         app._toggle_theme()
         self.assertEqual(app.theme_mode, 'dark')
 
+    def test_buttons_have_contrast_in_normal_disabled_and_active_states(self):
+        from tkinter import ttk
+        app = self.app
+        style = ttk.Style(app)
+        controls = {
+            app.settings_btn: 'MonoIcon.TButton',
+            app.advanced_link: 'MonoLink.TButton',
+            app.search_btn: 'MonoPrimary.TButton',
+            app.stop_btn: 'MonoSecondary.TButton',
+            app.export_btn: 'MonoSecondary.TButton',
+        }
+        for mode in ('dark', 'light'):
+            app.theme_mode = mode
+            app._apply_theme()
+            self.assertEqual(style.theme_use(), 'clam')
+            for widget, name in controls.items():
+                with self.subTest(mode=mode, widget=name):
+                    self.assertIsInstance(widget, ttk.Button)
+                    self.assertEqual(widget.cget('style'), name)
+                    for state in ((), ('active',), ('pressed',), ('disabled',)):
+                        foreground = style.lookup(name, 'foreground', state)
+                        background = style.lookup(name, 'background', state)
+                        self.assertTrue(foreground and background)
+                        self.assertNotEqual(foreground.lower(), background.lower())
+        app.theme_mode = 'dark'
+        app._apply_theme()
+
+    def test_settings_dialog_controls_are_legible_themed_buttons(self):
+        from tkinter import ttk
+        app = self.app
+        app._open_settings()
+        dialog = app._open_windows[-1]
+        frame = next(child for child in dialog.winfo_children()
+                     if isinstance(child, tk.Frame))
+        buttons = [widget for widget in frame.winfo_children()
+                   if isinstance(widget, ttk.Button)]
+        self.assertGreaterEqual(len(buttons), 8)
+        self.assertFalse(any(isinstance(w, tk.Button) for w in frame.winfo_children()))
+        for widget in buttons:
+            self.assertEqual(widget.cget('style'), 'MonoSecondary.TButton')
+
     def test_black_white_default_values_and_result_columns(self):
         app = self.app
         self.assertEqual(app.theme_mode, 'dark')
