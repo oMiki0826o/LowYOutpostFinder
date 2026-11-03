@@ -24,6 +24,19 @@ class SimpleHomeTkTests(unittest.TestCase):
             except tk.TclError:
                 pass
 
+    def test_ttk_combobox_is_not_styled_as_classic_tk_entry(self):
+        """ttk.Combobox inherits tk.Entry but rejects classic -bg/-fg options."""
+        import tkinter.ttk as ttk
+        self.assertTrue(issubclass(ttk.Combobox, tk.Entry))
+        app = self.app
+        self.assertIsInstance(app.version_field, ttk.Combobox)
+        self.assertNotIsInstance(app.version_field, type(app.seed_field))
+        # Both initial theming and toggling must remain safe on real Tk.
+        app._apply_theme()
+        app._toggle_theme()
+        app._toggle_theme()
+        self.assertEqual(app.theme_mode, 'dark')
+
     def test_black_white_default_values_and_result_columns(self):
         app = self.app
         self.assertEqual(app.theme_mode, 'dark')
