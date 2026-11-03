@@ -14,8 +14,14 @@ class SimpleHomeTkTests(unittest.TestCase):
         try:
             self.app = SimpleApp(auto_prepare=False)
             self.app.update_idletasks()
-        except tk.TclError:
-            self.skipTest('No graphical Tk display')
+        except tk.TclError as exc:
+            # Never disguise a real UI startup regression (e.g. unknown -bg
+            # on macOS ttk.Combobox) as missing DISPLAY.
+            reason = str(exc).lower()
+            if ('no display name' in reason or "couldn't connect to display" in reason
+                    or 'could not connect to display' in reason):
+                self.skipTest('No graphical Tk display')
+            raise
 
     def tearDown(self):
         if hasattr(self, 'app'):
