@@ -599,7 +599,12 @@ class SimpleApp(tk.Tk):
                     window.destroy()
             except tk.TclError:
                 pass
-        self.destroy()
+        super().destroy()
+
+    def destroy(self):
+        if self._closing:
+            return super().destroy()
+        self._on_close()
 
 
 def main(argv=None):
