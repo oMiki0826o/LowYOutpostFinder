@@ -61,6 +61,14 @@ def build_terrain(archive: Path, output_name: str = "lowyoutpost") -> Path:
         raise RuntimeError("Archive must contain exactly one lysh-c/src/rng.c")
     source_dir = rng_sources[0].parent
     project_dir = source_dir.parent
+    import re
+    carver = source_dir / "carver.c"
+    text = carver.read_text()
+    pattern = r'_Static_assert\(MC_SIN_SCALE == 10430\.378350470453,.*?\);'
+    fixed, count = re.subn(pattern, "/* C11 compatibility */", text, flags=re.S)
+    if count != 1:
+        raise RuntimeError("Unexpected upstream carver.c")
+    carver.write_text(fixed)
     # The upstream project enables AVX2 unconditionally on non-macOS builds.
     # Keep the downloaded archive intact, but make the disposable build copy
     # portable to CPUs and virtual machines without AVX2 support.
