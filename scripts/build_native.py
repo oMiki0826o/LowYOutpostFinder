@@ -48,6 +48,29 @@ def _extract_core(archive: Path, destination: Path) -> None:
         raise RuntimeError("Supported upstream archives: .zip, .tar.gz, .tgz")
 
 
+def _fix_upstream_carver(source_dir: Path) -> None:
+    """Remove a non-C11 floating-point assertion from the pinned source copy.
+
+    Only the exact audited source is patched. The constant and algorithm
+    remain unchanged; unexpected upstream revisions fail closed.
+    """
+    carver = source_dir / "carver.c"
+    content = carver.read_text(encoding="utf-8")
+    macro = "#define MC_SIN_SCALE 0x1.45f306dc9c883p13"
+    assertion = (
+        '_Static_assert(MC_SIN_SCALE == 10430.378350470453,\n'
+        '               "MC_SIN_SCALE must be the exact double 10430.378350470453d");'
+    )
+    if content.count(macro) != 1 or content.count(assertion) != 1:
+        raise RuntimeError("Pinned upstream carver.c layout changed; refusing unsafe patch")
+    if float.fromhex("0x1.45f306dc9c883p13") != float("10430.378350470453"):
+        raise RuntimeError("Pinned MC_SIN_SCALE constant is not equivalent")
+    carver.write_text(
+        content.replace(assertion, "/* C11: checked by build_native.py. */", 1),
+        encoding="utf-8",
+    )
+
+
 def build_terrain(archive: Path, output_name: str = "lowyoutpost") -> Path:
     if not archive.is_file():
         raise RuntimeError(f"Missing LowYSwampHut source archive: {archive}")
@@ -61,6 +84,7 @@ def build_terrain(archive: Path, output_name: str = "lowyoutpost") -> Path:
         raise RuntimeError("Archive must contain exactly one lysh-c/src/rng.c")
     source_dir = rng_sources[0].parent
     project_dir = source_dir.parent
+    _fix_upstream_carver(source_dir)
     # The upstream project enables AVX2 unconditionally on non-macOS builds.
     # Keep the downloaded archive intact, but make the disposable build copy
     # portable to CPUs and virtual machines without AVX2 support.

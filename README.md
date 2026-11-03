@@ -34,6 +34,7 @@ LowYOutpostFinder 是 Minecraft Java 版的低 Y 掠奪者前哨站搜尋工具,
 - 首次啟動時在背景檢查並嘗試編譯 C11 高度估算器; 已編譯且通過協定檢查時會直接重用.
 - 搜尋結果依搜尋中心的水平距離排序, 顯示版本, 種子, 序號, X, 估算 Y, Z, 兩種距離, 區塊座標與證據狀態, 並可匯出 CSV.
 - 提供執行紀錄, 停止搜尋, 唯一結果檔名及原生掃描的診斷資料.
+- 搜尋期間顯示生成區域數, 估算命中數及經過時間; 進度條以已找到數 / 目標數計算, 並在 C 引擎等待時顯示心跳. macOS C11 相容性修正已納入自動建置.
 - 進階模式保留放置候選, 全圖掃描, 已生成世界 NBT 讀取, 原版伺服器驗證及其餘既有工具.
 
 ### 安裝
@@ -108,6 +109,7 @@ The project version is recorded in [VERSION](VERSION). Estimated-height search c
 - First-run background setup of the C11 estimator, with reuse of a previously built scanner after protocol validation.
 - Distance-ranked results showing version, seed, index, X, estimated Y, Z, two distances, chunk coordinates and evidence status, plus CSV export.
 - Execution logs, search cancellation, unique output filenames and native scan diagnostics.
+- Live logs show scanned generation regions, estimated hits and elapsed time; determinate progress tracks found / requested and a heartbeat indicates a pending C scan. Automatic builds include a guarded macOS C11 compatibility patch.
 - Advanced tools for placement candidates, whole-map scanning, read-only world NBT inspection, vanilla-server verification and the other existing modes.
 
 ### Installation

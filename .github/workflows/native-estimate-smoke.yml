@@ -2,10 +2,13 @@ name: Native estimated-height smoke
 
 on:
   push:
-    branches: [main, feat/simple-low-y-home-20261103]
+    branches: [main, test]
     paths:
       - 'lowy_outpost_finder/native_bootstrap.py'
       - 'lowy_outpost_finder/simple_workflow.py'
+      - 'lowy_outpost_finder/estimated_full_map.py'
+      - 'lowy_outpost_finder/full_map.py'
+      - 'lowy_outpost_finder/simple_gui.py'
       - 'native/**'
       - 'scripts/build_native.py'
       - '.github/workflows/native-estimate-smoke.yml'
@@ -57,6 +60,7 @@ jobs:
               result = subprocess.run([sys.executable, '-m', 'lowy_outpost_finder', *args],
                   check=True, capture_output=True, text=True, timeout=240)
               print(result.stderr[-1200:])
+              assert 'LOWY_SCAN_PROGRESS' in result.stderr, 'Missing live native search telemetry'
               rows = export_results(raw, public, req)
               assert rows, 'Scanner produced no test candidate'
               assert public.is_file()

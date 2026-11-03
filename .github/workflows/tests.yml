@@ -43,3 +43,24 @@ jobs:
           xvfb-run -a python -m unittest discover -s tests -p test_v2_gui_progress.py -v
           xvfb-run -a python -m unittest discover -s tests -p test_simple_home_tk.py -v
           xvfb-run -a python -m unittest discover -s tests -p test_ui_integration_2026.py -v
+
+  pytest-full:
+    name: Full pytest suite / Ubuntu Xvfb
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install test dependencies and virtual display
+        run: |
+          python -m pip install -r requirements-dev.txt
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb xauth python3-tk
+      - name: Run full pytest suite including Tk GUI regression checks
+        run: xvfb-run -a python -m pytest -q tests

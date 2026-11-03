@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -116,6 +117,19 @@ def is_classic_entry(widget) -> bool:
     return type(widget) is tk.Entry
 
 
+def format_search_progress(scanned: int, found: int, target: int, elapsed: float, language: str = 'zh-TW') -> tuple[str, float]:
+    """Actual found/target progress; scanned is only the latest reported count."""
+    denominator = max(1, target)
+    found = min(denominator, max(0, found))
+    scanned = max(0, scanned)
+    percent = 100.0 * found / denominator
+    if language == 'en-US':
+        message = f'Scanned {scanned:,} generation regions | found {found}/{denominator} | elapsed {int(max(0, elapsed))}s'
+    else:
+        message = f'已掃描 {scanned:,} 個生成區域 | 找到 {found}/{denominator} | 已執行 {int(max(0, elapsed))} 秒'
+    return message, percent
+
+
 class SimpleApp(tk.Tk):
     def __init__(self, language: str = 'zh-TW', *, auto_prepare: bool = True):
         super().__init__()
@@ -131,6 +145,11 @@ class SimpleApp(tk.Tk):
         self._setup_active = False
         self._poll_id = None
         self._setup_timer = None
+        self._scan_started = 0.0
+        self._last_heartbeat = 0.0
+        self._scanned_regions = 0
+        self._found_estimates = 0
+        self._scan_target = 25
         self.process: subprocess.Popen | None = None
         self.last_output: Path | None = None
         self.result_rows: list[dict] = []
@@ -232,8 +251,10 @@ class SimpleApp(tk.Tk):
         self.stop_btn.pack(fill='x', pady=(0, 9))
         self.engine_status = self._label(self.body, self.t('not_ready'), 10,
                                          muted=True, fill='x', pady=(0, 4))
-        self.progress = ttk.Progressbar(self.body, mode='indeterminate', length=180)
-        self.progress.pack(fill='x', pady=(0, 9))
+        self.progress = ttk.Progressbar(self.body, mode='determinate', maximum=100, length=180)
+        self.progress.pack(fill='x', pady=(0, 3))
+        self.progress_caption = self._label(self.body, '0.0% · 0/25', 10, muted=True,
+                                            fill='x', pady=(0, 9))
         self._separator = tk.Frame(self.body, height=1)
         self._separator.pack(fill='x', pady=(8, 12))
 
@@ -472,14 +493,22 @@ class SimpleApp(tk.Tk):
         self.export_btn.configure(state='disabled')
         self.engine_status.configure(text=self.t('running'))
         self.status.set(self.t('running'))
-        self.progress.configure(mode='indeterminate')
-        self.progress.start(15)
+        self.progress.stop()
+        self.progress.configure(mode='determinate', maximum=100, value=0)
+        self._scan_started = time.monotonic()
+        self._last_heartbeat = self._scan_started
+        self._scanned_regions = 0
+        self._found_estimates = 0
+        self._scan_target = int(request.top)
+        self.progress_caption.configure(text=f'0.0% · 0/{self._scan_target}')
         self.result_rows = []
         self.last_output = None
         for item in self.tree.get_children():
             self.tree.delete(item)
         self.notebook.select(1)
         self._append_log(f'--- {self.t("running")} ---')
+        self._append_log('正在等待 C 引擎回報首批掃描資料…' if self.language == 'zh-TW' else
+                         'Waiting for first C scanner progress event…')
         self._append_log(' '.join((request.version, 'seed=' + request.seed,
                                    'Y < ' + request.max_y, 'radius=' + request.radius,
                                    'top=' + request.top)))
@@ -557,6 +586,7 @@ class SimpleApp(tk.Tk):
                     self._setup_active = False
                     self._ready = event[1]
                     self.progress.stop()
+                    self.progress.configure(mode='determinate', maximum=100, value=0)
                     self.engine_status.configure(
                         text=self.t('ready') if self._ready else self.t('setup_fail'))
                     if self._ready:
@@ -567,6 +597,22 @@ class SimpleApp(tk.Tk):
                         self.notebook.select(1)
                         messagebox.showerror(self.t('setup_fail'), explanation, parent=self)
                 elif kind == 'log':
+                    native_match = re.match(r'^LOWY_SCAN_PROGRESS (\d+) (\d+) (\d+) (\d+) (\S+)', event[1])
+                    if native_match:
+                        regions, _rings, found, target = map(int, native_match.groups()[:4])
+                        if target == self._scan_target:
+                            self._scanned_regions = max(self._scanned_regions, regions)
+                            self._found_estimates = min(target, max(self._found_estimates, found))
+                            line, percent = format_search_progress(
+                                self._scanned_regions, self._found_estimates,
+                                self._scan_target, time.monotonic() - self._scan_started,
+                                self.language)
+                            self.progress.configure(value=percent)
+                            self.progress_caption.configure(text=f'{percent:.1f}% · {self._found_estimates}/{self._scan_target}')
+                            self.engine_status.configure(text=line)
+                            self._append_log(line)
+                            self._last_heartbeat = time.monotonic()
+                        continue
                     self._append_log(event[1])
                     match = re.match(r'^FULLMAP_ESTIMATE_PROGRESS (\d+) (\d+|ring) (\d+) ', event[1])
                     if match:
@@ -580,6 +626,10 @@ class SimpleApp(tk.Tk):
                     self.progress.stop()
                     self.stop_btn.configure(state='disabled')
                     self.search_btn.configure(state='normal')
+                    self._found_estimates = len(rows)
+                    percentage = 100.0 * len(rows) / max(1, self._scan_target)
+                    self.progress.configure(mode='determinate', value=min(100.0, percentage))
+                    self.progress_caption.configure(text=f'{min(100.0, percentage):.1f}% · {len(rows)}/{self._scan_target}')
                     self.result_rows = rows
                     self.last_output = Path(path)
                     for row in rows[:500]:
@@ -612,6 +662,14 @@ class SimpleApp(tk.Tk):
                         messagebox.showerror(self.t('search_fail'), message, parent=self)
         except queue.Empty:
             pass
+        if self._busy and self._scan_started:
+            now = time.monotonic()
+            if now - self._last_heartbeat >= 2.0:
+                line, _ = format_search_progress(
+                    self._scanned_regions, self._found_estimates,
+                    self._scan_target, now - self._scan_started, self.language)
+                self._append_log(line + ('（等待下一批掃描回報）' if self.language == 'zh-TW' else ' (waiting for next scanner report)'))
+                self._last_heartbeat = now
         if not self._closing:
             self._poll_id = self.after(120, self._poll)
 

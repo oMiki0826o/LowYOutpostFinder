@@ -427,6 +427,13 @@ def run_command(args) -> None:
             total = state.get('total_regions', 'ring')
             print(f"FULLMAP_ESTIMATE_PROGRESS {checked} {total} "
                   f"{state['estimated_height_passes']} {state['status']}", file=sys.stderr, flush=True)
+            if args.strategy == 'nearest':
+                scanned = state.get('scanned_regions')
+                if scanned is None:
+                    scanned = (2 * checked - 1) ** 2 if checked else 0
+                print(f"LOWY_SCAN_PROGRESS {scanned} {checked} "
+                      f"{state['estimated_height_passes']} {cfg.top} {state['status']}",
+                      file=sys.stderr, flush=True)
         if args.strategy == 'nearest':
             result = scan_estimated_nearest(cfg, args.out, resume=args.resume, max_batches=args.max_batches,
                                              progress=announce_estimate)

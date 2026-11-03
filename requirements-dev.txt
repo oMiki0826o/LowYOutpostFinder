@@ -1,1 +1,2 @@
-# Development dependencies: none. Tests use unittest from the Python standard library.
+# Full pytest suite; production code remains stdlib-only.
+pytest>=8.3,<10

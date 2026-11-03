@@ -26,3 +26,7 @@ results/
 .DS_Store
 .env
 *.log
+
+# Local scratch patches and source backups
+*.py.bak
+*.failed

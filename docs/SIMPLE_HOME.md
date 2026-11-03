@@ -108,3 +108,28 @@ This is not an original Minecraft world-generation proof.
   overwrite an existing results CSV.
 - **macOS bad window path:** the advanced Tk window cancels pending idle
   resize callbacks and guards destroyed widgets.
+
+## Live progress / 即時進度
+
+The progress bar advances only when qualifying **estimated** results arrive:
+`100 * min(found, requested) / requested`. It is deliberately labelled
+as result collection progress, not coverage or proof of nearest results.
+C11 scanner progress is streamed on stderr as `LOWY_NATIVE_PROGRESS`,
+converted into `LOWY_SCAN_PROGRESS` by the Python CLI, then shown by Tk.
+It counts 512×512-block structure-placement regions; no world chunks are generated.
+The UI emits a timed heartbeat before the first hit and between native reports,
+without claiming that a pending C process has completed any further regions.
+
+進度條代表符合條件的近似候選收集比例；Log 顯示已掃描生成區域、
+找到的數量及執行秒數。尚未取得新計數時僅顯示等待心跳，避免假進度。
+
+## Full pytest suite / 完整測試
+
+```bash
+python -m pip install -r requirements-dev.txt
+# GUI tests require a display; on Ubuntu:
+xvfb-run -a python -m pytest -q tests
+```
+
+GitHub Actions runs this full pytest suite on Ubuntu/Xvfb and retains the
+existing OS/Python unittest matrix plus macOS/Ubuntu native build smoke tests.
