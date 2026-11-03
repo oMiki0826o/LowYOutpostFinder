@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import tkinter as tk
 import unittest
+from unittest.mock import patch
 
 from lowy_outpost_finder.simple_gui import SimpleApp, PUBLIC_FIELDS
 from lowy_outpost_finder.gui import App as LegacyApp
@@ -44,6 +45,14 @@ class SimpleHomeTkTests(unittest.TestCase):
         self.assertEqual(app.vars['max_y'].get(), '-37')
         app._toggle_theme()
         self.assertEqual(app.cget('background'), '#ffffff')
+
+    def test_retry_native_setup_clears_prior_cancellation(self):
+        app = self.app
+        app.cancel_event.set()
+        with patch('lowy_outpost_finder.simple_gui.threading.Thread') as worker:
+            app._prepare_backend()
+        self.assertFalse(app.cancel_event.is_set())
+        worker.assert_called_once()
 
     def test_missing_toolchain_message_has_chinese_guidance(self):
         app = self.app
