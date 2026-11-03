@@ -34,6 +34,7 @@ LowYOutpostFinder 是 Minecraft Java 版的低 Y 掠奪者前哨站搜尋工具,
 - 首次啟動時在背景檢查並嘗試編譯 C11 高度估算器; 已編譯且通過協定檢查時會直接重用.
 - 搜尋結果依搜尋中心的水平距離排序, 顯示版本, 種子, 序號, X, 估算 Y, Z, 兩種距離, 區塊座標與證據狀態, 並可匯出 CSV.
 - 提供執行紀錄, 停止搜尋, 唯一結果檔名及原生掃描的診斷資料.
+- 搜尋期間顯示生成區域數, 估算命中數及經過時間; 進度條以已找到數 / 目標數計算, 並在 C 引擎等待時顯示心跳. macOS C11 相容性修正已納入自動建置.
 - 進階模式保留放置候選, 全圖掃描, 已生成世界 NBT 讀取, 原版伺服器驗證及其餘既有工具.
 
 ### 安裝
@@ -77,19 +78,6 @@ python3 -m lowy_outpost_finder full-map \
 
 其他進階模式及限制請參考 [極簡首頁指南](docs/SIMPLE_HOME.md), [架構說明](docs/ARCHITECTURE.md) 與 [CLI 使用指南](docs/USAGE.md).
 
-### 搜尋進度及 macOS 原生編譯
-
-簡潔首頁會顯示依「符合條件的近似候選／目標數量」計算的進度條，
-例如找到 2/25 筆表示 8%，**並非已掃描全世界 8%**。
-執行紀錄會顯示已掃描的 512×512 方塊前哨站生成區域數、
-找到的候選數與經過時間。原生引擎尚未回報時，介面仍定期輸出
-等待下一次掃描回報的心跳，但不會虛構掃描數量。
-
-macOS Clang 的 C11 相容性修正已納入自動編譯流程：
-先確認上游固定版本的常數及斷言格式，再修補一次性建置副本，
-避免重新下載時覆寫使用者手動修正。完整回歸測試可使用
-`python -m pytest -q tests`（GUI 測試需顯示器或 Xvfb）。
-
 ### 授權
 
 本專案採用 [MIT License](LICENSE). C 高度估算器會使用第三方 MIT 授權的 LowYSwampHut 原始碼, 其授權與作者資訊以原始專案為準. Minecraft 為 Mojang Studios 的作品. 本專案不包含官方 Minecraft server JAR 或世界存檔.
@@ -121,6 +109,7 @@ The project version is recorded in [VERSION](VERSION). Estimated-height search c
 - First-run background setup of the C11 estimator, with reuse of a previously built scanner after protocol validation.
 - Distance-ranked results showing version, seed, index, X, estimated Y, Z, two distances, chunk coordinates and evidence status, plus CSV export.
 - Execution logs, search cancellation, unique output filenames and native scan diagnostics.
+- Live logs show scanned generation regions, estimated hits and elapsed time; determinate progress tracks found / requested and a heartbeat indicates a pending C scan. Automatic builds include a guarded macOS C11 compatibility patch.
 - Advanced tools for placement candidates, whole-map scanning, read-only world NBT inspection, vanilla-server verification and the other existing modes.
 
 ### Installation
@@ -163,23 +152,6 @@ python3 -m lowy_outpost_finder full-map \
 ```
 
 See [Simple Home](docs/SIMPLE_HOME.md), [Architecture](docs/ARCHITECTURE.md) and [CLI Usage](docs/USAGE.md) for advanced modes and limitations.
-
-### Live progress and native build on macOS
-
-The estimated-height home now shows a **determinate** progress bar for matched
-candidates (found / requested, e.g. 2/25 = 8%). This is **not the fraction
-of the world scanned**. The execution log also reports the actual number of
-512×512-block outpost-placement regions scanned, matched candidate count and
-elapsed seconds. If no new native event arrives, a timed heartbeat keeps
-the UI responsive without inventing processed regions.
-
-For macOS Clang, the pinned upstream C source's floating-point `_Static_assert`
-is replaced only after checking the exact audited source expression and
-IEEE-754 constant equivalence. This occurs in the disposable build copy,
-so re-running automatic setup will not undo the portability fix.
-
-Run `python -m pytest -q tests` (with a graphical display/Xvfb for GUI tests)
-and `python scripts/run_headless_tests.py` for regression checks.
 
 ### License
 
