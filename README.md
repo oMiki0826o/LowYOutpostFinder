@@ -50,15 +50,15 @@ Windows 可以使用:
 py LowYOutpostFinder.py
 ```
 
-原生低 Y 估算器是選用功能. 它需要 C11 編譯器, CMake, 以及使用者提供的 LowYSwampHut 原始碼封存檔:
+**新的極簡首頁預設搜尋近似低 Y 前哨站**：輸入種子、結構中心 Y 門檻、半徑與數量即可開始。預設中心 (0,0)、半徑 30,000,000 方塊、中心 Y < -37、25 筆。右上角設定可開啟所有舊版進階模式；首頁為純黑白介面。
 
-```bash
-python3 scripts/build_native.py estimate /path/to/LowYSwampHut-main.tar.gz
-```
+首次啟動時程式會在背景檢查並嘗試編譯 C 高度引擎，自動從固定 Git commit 取得 MIT 授權的 LowYSwampHut 來源，不用手動準備封存檔。但電腦**仍必須先具備 Git、CMake 及 C11 編譯器**；若缺少系統工具，GUI 會顯示具體指引，不會偷偷改成只有 X/Z 的候選掃描。編譯成功後後續執行可直接重用。
+
+使用者輸出的 CSV 固定含版本、種子、序號、X、估算 Y、Z、距離中心、距離 (0,0)、區塊 X/Z 及證據狀態。近似 Y 不等於原版生成驗證，且現有環狀提前停止演算法**不保證全世界嚴格最近 N 筆**。詳見 [極簡首頁與自動編譯說明](docs/SIMPLE_HOME.md)。
 
 ### 使用方式
 
-啟動 GUI 後選擇模式, Java 版本與種子即可開始. 下列是常用 CLI 範例:
+啟動 GUI 後只需輸入種子與必要參數；進階操作可從右上角設定開啟。下列為進階 CLI 範例:
 
 ```bash
 # 搜尋不生成區塊的前哨站放置候選.
@@ -129,15 +129,27 @@ On Windows:
 py LowYOutpostFinder.py
 ```
 
-The native low-Y estimator is optional. It needs a C11 compiler, CMake, and a user-supplied LowYSwampHut source archive:
+**The new default home is a minimal monochrome estimated low-Y search.**
+Enter a signed Minecraft seed, centre-Y threshold, radius and result count.
+The defaults are centre (0,0), radius 30,000,000 blocks, strict structure
+centre Y < -37, and 25 results. The top-right Settings button opens every
+legacy advanced mode.
 
-```bash
-python3 scripts/build_native.py estimate /path/to/LowYSwampHut-main.tar.gz
-```
+On first launch the GUI checks the estimated-height C scanner and attempts
+to build it automatically using an exact pinned MIT-licensed LowYSwampHut
+source commit. The host must already have Git, CMake and a C11 compiler.
+If prerequisites are missing, the UI reports them without silently falling
+back to unverified placement-only search.
+
+The CSV includes version, seed, index, X, estimated Y, Z, both centre and
+origin distances, chunk X/Z and status. Estimated Y is **not vanilla-verified**,
+and the current centre-out ring stopping rule does **not prove the globally
+nearest N qualified structures**. See [Simple Home / first run](docs/SIMPLE_HOME.md).
 
 ### Usage
 
-Open the GUI, choose a mode, Java version, and seed. Common CLI examples:
+Launch the GUI and enter the seed and other basic settings. Advanced modes
+remain in the top-right settings menu. Common CLI examples:
 
 ```bash
 # Search placement candidates without generating chunks.
