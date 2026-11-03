@@ -39,6 +39,7 @@ class SearchRequest:
     java: str = 'java'
     priority: str = 'near-origin'
     sort_by: str = 'distance'
+    nearest_only: bool = False
     scan_strategy: str = 'nearest'
     scan_engine: str = 'auto'
     height_engine: str = 'placement'
@@ -89,8 +90,13 @@ def build_arguments(req: SearchRequest, *, language: str = 'zh-TW') -> tuple[lis
             raise ValueError('scan_engine must be auto, python or native')
         if req.height_engine not in ('placement', 'estimate'):
             raise ValueError('height_engine must be placement or estimate')
-        if req.resume and req.scan_strategy != 'exhaustive':
-            raise ValueError('Resume is available only for exhaustive scans')
+        if req.resume and not (req.scan_strategy == 'exhaustive' or
+                               (req.scan_strategy == 'nearest' and req.height_engine == 'estimate')):
+            raise ValueError('Resume is available only for exhaustive or nearest estimated-height scans')
+        if req.height_engine == 'estimate' and req.version != '1.21.8':
+            raise ValueError('Whole-map height estimates support Minecraft 1.21.8 only')
+        if req.height_engine == 'estimate' and not req.max_y.strip():
+            raise ValueError('Estimated-height search requires a Y threshold')
         args += ['--seed', str(seed),
                  '--center-x', str(num(req.center_x, 'center_x', -29_999_984, 29_999_984)),
                  '--center-z', str(num(req.center_z, 'center_z', -29_999_984, 29_999_984)),
@@ -112,6 +118,8 @@ def build_arguments(req: SearchRequest, *, language: str = 'zh-TW') -> tuple[lis
             raise ValueError(tr(language, 'error_seed')) from exc
         radius = num(req.radius, 'radius', 0, 30_000_000)
         args += ['--seed', str(seed), '--radius', str(radius)]
+        if req.mode == 'candidates' and req.nearest_only:
+            args += ['--nearest', str(num(req.top, 'top', 1, 10000))]
         if req.mode in ('candidates', 'seed-vanilla'):
             args += ['--center-x', str(num(req.center_x, 'center_x', -30_000_000, 30_000_000)),
                      '--center-z', str(num(req.center_z, 'center_z', -30_000_000, 30_000_000))]
