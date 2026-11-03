@@ -14,6 +14,7 @@ GUI_TEST_MODULES = frozenset({
     "test_gui_lifecycle",
     "test_main_gui_close",
     "test_v2_gui_progress",
+    "test_simple_home_tk",
 })
 
 

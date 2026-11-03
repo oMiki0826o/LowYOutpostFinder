@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/badge/version-2.0.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Stack](https://img.shields.io/badge/stack-Python%20%2B%20C11-lightgrey)
+![Tech](https://img.shields.io/badge/stack-Python%20%2B%20C11-lightgrey)
 ![Minecraft](https://img.shields.io/badge/minecraft%20Java-1.21.8-orange)
 
 [中文](#中文) | [English](#english)
@@ -21,22 +21,24 @@
 
 ### 關於
 
-LowYOutpostFinder 是供 Minecraft Java 版世界種子研究使用的掠奪者前哨站工具. 它提供 GUI 與 CLI, 可計算結構放置候選, 掃描已儲存世界的 NBT 證據, 並為 Java 1.21.8 提供選用的低 Y 地形估算掃描.
+LowYOutpostFinder 是 Minecraft Java 版的低 Y 掠奪者前哨站搜尋工具, 由 Python GUI/CLI 與選用的 C11 高度估算器組成. 預設開啟簡潔的黑白介面, 讓使用者只需輸入種子碼, 設定高度門檻, 搜尋範圍及結果數量, 就能搜尋近似低 Y 前哨站.
 
-本專案明確區分證據等級. `placement_candidate` 只證明結構放置公式的 X/Z 候選. `estimated_only` 是實驗性種子地形估算, 不是原版等效的真實高度. 只有從已生成世界資料讀取的 `verified_tower` 才能確認塔樓存在.
+**重要限制:** 預設模式使用實驗性的地形高度推算, 結果狀態為 `estimated_only`, **不是** Minecraft 原版已生成的真實前哨站. 目前的環狀搜尋找到指定數量後會提前停止, 雖然會依水平距離排序已找到的結果, 但**不能保證它們是全世界最近的 N 個符合條件的前哨站**. 如需確認實際生成和 Y, 請使用進階模式讀取已生成世界, 或執行原版伺服器驗證.
+
+專案版本請以根目錄 [VERSION](VERSION) 為準. 高度估算目前僅支援 **Minecraft Java 1.21.8**; 其他版本的放置候選或存檔驗證功能依各模式實作而定.
 
 ### 功能
 
-- 依 Minecraft Java 結構放置規則搜尋掠奪者前哨站的 X/Z 候選.
-- 提供繁體中文與 English Tk GUI, 也支援可自動化的 CLI.
-- 以中心向外的 strict-nearest 模式排序結果, 收到指定數量的估算候選後停止.
-- 使用選用 C11 原生掃描器進行 Java 1.21.8 的低 Y 估算, 支援工作者數設定與可續跑掃描.
-- 唯讀檢查已生成世界的 NBT, 以 `verified_tower` 回報可由存檔證據確認的塔樓.
-- 內建 1.21.8 前哨站資產雜湊, 可選擇以相同版本 JAR 做維護性驗證, 正常掃描不依賴 JAR.
+- 預設黑白 GUI, 支援繁體中文與 English, 右上角設定可開啟原有進階搜尋模式.
+- 依種子搜尋低 Y 近似候選, 預設結構中心 **Y < -37**, 搜尋中心 **(0,0)**, 搜尋半徑 **30,000,000 方塊**, 輸出 **25 筆**.
+- 首次啟動時在背景檢查並嘗試編譯 C11 高度估算器; 已編譯且通過協定檢查時會直接重用.
+- 搜尋結果依搜尋中心的水平距離排序, 顯示版本, 種子, 序號, X, 估算 Y, Z, 兩種距離, 區塊座標與證據狀態, 並可匯出 CSV.
+- 提供執行紀錄, 停止搜尋, 唯一結果檔名及原生掃描的診斷資料.
+- 進階模式保留放置候選, 全圖掃描, 已生成世界 NBT 讀取, 原版伺服器驗證及其餘既有工具.
 
 ### 安裝
 
-從原始碼執行需要 Python 3.11 以上與 Tkinter. 專案沒有第三方 Python 執行期依賴.
+需要 **Python 3.11+** 和 Tkinter. 第一次自動編譯 C 高度估算器時, 電腦還需要 **Git, CMake, C11 編譯器以及網路連線**. 程式會下載固定 Git commit 的 MIT 授權 LowYSwampHut 原始碼並自行建置, 不會自動以管理員權限安裝系統工具, 也不會在 C 引擎失敗時偷偷退回只有 X/Z 的搜尋.
 
 ```bash
 git clone https://github.com/oMiki0826o/LowYOutpostFinder.git
@@ -44,47 +46,40 @@ cd LowYOutpostFinder
 python3 LowYOutpostFinder.py
 ```
 
-Windows 可以使用:
+Windows 可使用 `py LowYOutpostFinder.py`, 但目前自動編譯的原生端到端 CI 驗證主要涵蓋 macOS 與 Ubuntu. 在 macOS 上缺少編譯器時需先安裝 Xcode Command Line Tools 與 CMake; Ubuntu 則需要 Git, CMake 與 C 編譯工具. 若環境不足, GUI 會顯示原因與重新嘗試入口.
 
-```powershell
-py LowYOutpostFinder.py
-```
-
-原生低 Y 估算器是選用功能. 它需要 C11 編譯器, CMake, 以及使用者提供的 LowYSwampHut 原始碼封存檔:
-
-```bash
-python3 scripts/build_native.py estimate /path/to/LowYSwampHut-main.tar.gz
-```
+不需要另外下載 Minecraft server JAR 來使用預設的近似搜尋. 原版伺服器驗證模式另有自己的需求與授權確認流程.
 
 ### 使用方式
 
-啟動 GUI 後選擇模式, Java 版本與種子即可開始. 下列是常用 CLI 範例:
+1. 執行 `LowYOutpostFinder.py`, 在首頁輸入 Minecraft Java 世界種子.
+2. 確認 **結構中心高度低於 -37** (嚴格小於, 不是基板 Y), 調整搜尋半徑和結果數量.
+3. C 引擎就緒後按下開始搜尋. 搜尋中心預設為世界原點 `(0,0)`, **不一定是實際出生點**.
+4. 查看搜尋結果與執行紀錄; 程式會自動在 `results/` 建立不同名稱的 CSV, 也可以另外匯出.
 
-```bash
-# 搜尋不生成區塊的前哨站放置候選.
-python3 -m lowy_outpost_finder candidates \
-  --version 1.21.8 --seed 1233211234567 --radius 8192 --out candidates.csv
+CSV 使用固定英文欄位, 第一列為欄名:
 
-# 以 0,0 為中心向外尋找最近的低 Y 估算候選.
-# 需要先建置 bin/outpost_estimate. threads=0 代表自動選擇工作者數.
-python3 -m lowy_outpost_finder full-map \
-  --version 1.21.8 --seed 1233211234567 \
-  --height-engine estimate --strategy nearest --center-x 0 --center-z 0 \
-  --max-y -37 --top 10 --threads 0 --out estimated-nearest.csv
-
-# 唯讀掃描既有世界存檔中的已生成前哨站證據.
-python3 -m lowy_outpost_finder world \
-  --world /path/to/world-copy --max-y 0 --out saved-outposts.csv
-
-# 可選. 驗證內建 1.21.8 前哨站資產雜湊.
-python3 scripts/verify_outpost_assets.py /path/to/server-1.21.8.jar
+```csv
+version,seed,index,x,estimated_y,z,distance_from_center,distance_from_origin,chunk_x,chunk_z,status
 ```
 
-在上述 strict-nearest 範例中, `--max-y -37` 比較的是瞭望塔箱子層的結構中心. 前哨站的自然刷怪範圍還有垂直延伸, 不應把它誤讀為每一個刷怪方塊都在 Y < -37.
+`estimated_y` 為估算的結構中心 Y; `distance_from_center` 與 `distance_from_origin` 單位都是方塊. `status=estimated_only` 不代表實際生成, 不能視為 `verified_tower`.
+
+如需命令列搜尋, 可先確保 C 引擎已完成編譯, 再執行:
+
+```bash
+python3 -m lowy_outpost_finder full-map \
+  --version 1.21.8 --seed 1233211234567 \
+  --height-engine estimate --strategy nearest \
+  --center-x 0 --center-z 0 --max-y -37 --top 25 \
+  --out estimated-nearest.csv
+```
+
+其他進階模式及限制請參考 [極簡首頁指南](docs/SIMPLE_HOME.md), [架構說明](docs/ARCHITECTURE.md) 與 [CLI 使用指南](docs/USAGE.md).
 
 ### 授權
 
-本專案採用 [MIT License](./LICENSE). Minecraft 是 Mojang Studios 的作品. 本專案不包含官方 server JAR, 世界存檔或 LowYSwampHut 原始碼.
+本專案採用 [MIT License](LICENSE). C 高度估算器會使用第三方 MIT 授權的 LowYSwampHut 原始碼, 其授權與作者資訊以原始專案為準. Minecraft 為 Mojang Studios 的作品. 本專案不包含官方 Minecraft server JAR 或世界存檔.
 
 ---
 
@@ -100,22 +95,24 @@ python3 scripts/verify_outpost_assets.py /path/to/server-1.21.8.jar
 
 ### About
 
-LowYOutpostFinder is a pillager outpost research tool for Minecraft Java world seeds. It provides a GUI and CLI for structural placement candidates, saved-world NBT evidence, and an optional low-Y terrain estimate scanner for Java 1.21.8.
+LowYOutpostFinder searches for low-Y pillager outpost candidates in Minecraft Java Edition. It combines a Python GUI/CLI with an optional C11 terrain-height estimator. The default monochrome interface lets users enter a seed, height threshold, search radius and result count without configuring the scanning engine manually.
 
-The project keeps its evidence levels explicit. `placement_candidate` proves only an X/Z candidate under the structure placement formula. `estimated_only` is an experimental seed-only terrain estimate, not a vanilla-equivalent actual height. Only `verified_tower`, read from generated world data, confirms that a tower exists.
+**Important limitation:** The default mode produces experimental terrain estimates marked `estimated_only`, **not** confirmed vanilla-generated outposts. The current centre-out ring scan stops after collecting the requested number of estimates. The returned results are sorted by horizontal distance, but **this does not prove they are the globally nearest N qualifying outposts**. To confirm actual world generation and Y, use the advanced saved-world inspection or vanilla-server verification modes.
+
+The project version is recorded in [VERSION](VERSION). Estimated-height search currently supports **Minecraft Java 1.21.8 only**. Placement and saved-world modes have their own version constraints.
 
 ### Features
 
-- Search pillager outpost X/Z candidates from Minecraft Java structure placement rules.
-- Use a bilingual Traditional Chinese and English Tk GUI, or automate the CLI.
-- Rank candidates with a centre-out strict-nearest scan and stop after the requested estimate count is found.
-- Run optional C11 native Java 1.21.8 low-Y estimates with configurable workers and resumable scans.
-- Inspect generated-world NBT read-only and report saved-world tower evidence as `verified_tower`.
-- Pin hashes for the 1.21.8 outpost assets. A matching JAR is optional for maintenance verification and is not required for ordinary scans.
+- Monochrome GUI with Traditional Chinese and English; existing advanced search modes remain accessible in the top-right settings.
+- Seed-derived estimated low-Y scanning, with defaults of **structure centre Y < -37**, centre **(0,0)**, **30,000,000-block radius** and **25 results**.
+- First-run background setup of the C11 estimator, with reuse of a previously built scanner after protocol validation.
+- Distance-ranked results showing version, seed, index, X, estimated Y, Z, two distances, chunk coordinates and evidence status, plus CSV export.
+- Execution logs, search cancellation, unique output filenames and native scan diagnostics.
+- Advanced tools for placement candidates, whole-map scanning, read-only world NBT inspection, vanilla-server verification and the other existing modes.
 
 ### Installation
 
-Running from source requires Python 3.11 or newer and Tkinter. The project has no third-party Python runtime dependencies.
+Requires **Python 3.11+** and Tkinter. Building the estimated-height C scanner on first launch also requires **Git, CMake, a C11 compiler and internet access**. The program fetches a pinned revision of MIT-licensed LowYSwampHut source and builds it locally. It does not install privileged system packages or silently fall back to X/Z-only search if native setup fails.
 
 ```bash
 git clone https://github.com/oMiki0826o/LowYOutpostFinder.git
@@ -123,44 +120,37 @@ cd LowYOutpostFinder
 python3 LowYOutpostFinder.py
 ```
 
-On Windows:
+Windows users may run `py LowYOutpostFinder.py`, but end-to-end native compilation CI currently covers macOS and Ubuntu. On macOS, install Xcode Command Line Tools and CMake if missing. Ubuntu requires Git, CMake and a C compiler toolchain. The GUI explains missing prerequisites and offers a retry action.
 
-```powershell
-py LowYOutpostFinder.py
-```
-
-The native low-Y estimator is optional. It needs a C11 compiler, CMake, and a user-supplied LowYSwampHut source archive:
-
-```bash
-python3 scripts/build_native.py estimate /path/to/LowYSwampHut-main.tar.gz
-```
+The default estimated-height workflow does not require a Minecraft server JAR. Vanilla-server verification has separate prerequisites and license acceptance requirements.
 
 ### Usage
 
-Open the GUI, choose a mode, Java version, and seed. Common CLI examples:
+1. Run `LowYOutpostFinder.py` and enter a Minecraft Java world seed.
+2. Set the **structure centre Y below -37** threshold (strictly below, not base-plate Y), radius and number of results.
+3. When the C engine is ready, start searching. The default search centre is world origin `(0,0)`, **not necessarily the actual spawn**.
+4. Review results and logs. Each search creates a uniquely named CSV under `results/`; it can also be exported elsewhere.
 
-```bash
-# Search placement candidates without generating chunks.
-python3 -m lowy_outpost_finder candidates \
-  --version 1.21.8 --seed 1233211234567 --radius 8192 --out candidates.csv
+The CSV has a stable English header:
 
-# Search outward from 0,0 for the nearest low-Y estimated candidates.
-# Build bin/outpost_estimate first. threads=0 selects worker count automatically.
-python3 -m lowy_outpost_finder full-map \
-  --version 1.21.8 --seed 1233211234567 \
-  --height-engine estimate --strategy nearest --center-x 0 --center-z 0 \
-  --max-y -37 --top 10 --threads 0 --out estimated-nearest.csv
-
-# Read-only inspection of generated outpost evidence in an existing world copy.
-python3 -m lowy_outpost_finder world \
-  --world /path/to/world-copy --max-y 0 --out saved-outposts.csv
-
-# Optional. Verify the pinned 1.21.8 outpost asset hashes.
-python3 scripts/verify_outpost_assets.py /path/to/server-1.21.8.jar
+```csv
+version,seed,index,x,estimated_y,z,distance_from_center,distance_from_origin,chunk_x,chunk_z,status
 ```
 
-In the strict-nearest example above, `--max-y -37` compares the watchtower chest-floor structure centre. The natural outpost spawning volume extends vertically, so this does not mean every spawnable block is below Y < -37.
+`estimated_y` is the projected structure-centre Y. `distance_from_center` and `distance_from_origin` are measured in blocks. `status=estimated_only` does not imply generated-world evidence and must not be confused with `verified_tower`.
+
+For CLI usage, build the C estimator first, then run:
+
+```bash
+python3 -m lowy_outpost_finder full-map \
+  --version 1.21.8 --seed 1233211234567 \
+  --height-engine estimate --strategy nearest \
+  --center-x 0 --center-z 0 --max-y -37 --top 25 \
+  --out estimated-nearest.csv
+```
+
+See [Simple Home](docs/SIMPLE_HOME.md), [Architecture](docs/ARCHITECTURE.md) and [CLI Usage](docs/USAGE.md) for advanced modes and limitations.
 
 ### License
 
-This project is licensed under the [MIT License](./LICENSE). Minecraft is a property of Mojang Studios. This project does not bundle official server JARs, worlds, or LowYSwampHut source code.
+This project is licensed under the [MIT License](LICENSE). The C height estimator uses third-party MIT-licensed LowYSwampHut source; upstream attribution and license terms are retained. Minecraft is a property of Mojang Studios. This repository does not bundle official Minecraft server JARs or saved worlds.

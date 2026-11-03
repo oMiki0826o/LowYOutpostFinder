@@ -32,9 +32,13 @@ MODES = [(key, 'mode_' + key) for key in
 
 
 class App(tk.Tk):
-    def __init__(self, language: str = 'zh-TW'):
+    def __init__(self, language: str = 'zh-TW', initial_mode: str = 'candidates'):
         super().__init__()
         self.language = tk.StringVar(value=language)
+        if initial_mode not in dict(MODES):
+            raise ValueError('Unsupported advanced mode')
+        self._closing = False
+        self._layout_after = None
         self.theme_mode = tk.StringVar(value='dark')
         self.title(self.t('window_title'))
         self.geometry('1070x720')
@@ -50,7 +54,7 @@ class App(tk.Tk):
         self.last_output: Path | None = None
         self.vars = {}
         self.groups = {}
-        self.mode = tk.StringVar(value='candidates')
+        self.mode = tk.StringVar(value=initial_mode)
         self.banner = tk.StringVar(value=self.t('banner_ready'))
         self._theme()
         self._build()
@@ -109,7 +113,7 @@ class App(tk.Tk):
                 bind(child)
         bind(self.form_canvas)
         self.bind('<Configure>', self._resize_form_viewport, add='+')
-        self.after_idle(self._resize_form_viewport)
+        self._schedule_form_resize()
 
     def _scroll_form(self, event):
         if self.form_canvas.yview() == (0.0, 1.0):
@@ -126,15 +130,33 @@ class App(tk.Tk):
         self.form_canvas.yview_scroll(amount, 'units')
         return 'break'
 
+    def _schedule_form_resize(self):
+        if self._closing or self._layout_after is not None:
+            return
+        self._layout_after = self.after_idle(self._run_form_resize)
+
+    def _run_form_resize(self):
+        self._layout_after = None
+        self._resize_form_viewport()
+
     def _resize_form_viewport(self, event=None):
+        """Avoid touching a destroyed Tk widget after macOS Configure/after_idle."""
+        if self._closing:
+            return
         if event is not None and getattr(event, 'widget', self) is not self:
             return
         if not getattr(self, 'form_visible', False):
             return
-        size = max(170, min(420, self.winfo_height() - 430, self.form.winfo_reqheight() + 12))
-        if str(self.form_canvas.cget('height')) != str(size):
-            self.form_canvas.configure(height=size)
-        self._resize_form_scroll()
+        try:
+            if not self.form.winfo_exists() or not self.form_canvas.winfo_exists():
+                return
+            size = max(170, min(420, self.winfo_height() - 430,
+                                self.form.winfo_reqheight() + 12))
+            if int(self.form_canvas.cget('height')) != size:
+                self.form_canvas.configure(height=size)
+            self._resize_form_scroll()
+        except tk.TclError:
+            return
 
     def _update_height_note(self):
         if not hasattr(self, 'height_note'):
@@ -336,11 +358,23 @@ class App(tk.Tk):
         self.log_text.pack(fill='both', expand=True)
 
     def _resize_form_scroll(self, _event=None):
-        self.form_canvas.configure(scrollregion=self.form_canvas.bbox('all'))
+        if self._closing:
+            return
+        try:
+            if self.form_canvas.winfo_exists():
+                self.form_canvas.configure(scrollregion=self.form_canvas.bbox('all'))
+        except tk.TclError:
+            pass
 
     def _resize_form_window(self, event):
-        self.form_canvas.itemconfigure(self.form_item, width=event.width)
-        self._resize_form_scroll()
+        if self._closing:
+            return
+        try:
+            if self.form_canvas.winfo_exists():
+                self.form_canvas.itemconfigure(self.form_item, width=event.width)
+                self._resize_form_scroll()
+        except tk.TclError:
+            pass
 
     def _set_mode(self, *, reset_output: bool = True):
         mode = self.mode.get()
@@ -404,7 +438,7 @@ class App(tk.Tk):
         else:
             self.height_note.pack_forget()
         self.form_canvas.yview_moveto(0.0)
-        self.after_idle(self._resize_form_viewport)
+        self._schedule_form_resize()
         self._resize_form_scroll()
 
     def _apply_language(self, _event=None):
@@ -579,6 +613,13 @@ class App(tk.Tk):
             self._log(self.t('not_running_log'))
 
     def destroy(self):
+        self._closing = True
+        if self._layout_after is not None:
+            try:
+                self.after_cancel(self._layout_after)
+            except tk.TclError:
+                pass
+            self._layout_after = None
         if hasattr(self, '_hover'):
             self._hover.hide()
         timer = getattr(self, '_poll_id', None)
@@ -729,8 +770,10 @@ def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description='LowYOutpostFinder desktop GUI')
     parser.add_argument('--lang', choices=tuple(CATALOGS), default='zh-TW',
                         help='UI language / 介面語言')
+    parser.add_argument('--mode', choices=tuple(key for key, _ in MODES),
+                        default='candidates', help='Initial advanced search mode')
     args = parser.parse_args(argv)
-    App(language=args.lang).mainloop()
+    App(language=args.lang, initial_mode=args.mode).mainloop()
 
 
 if __name__ == '__main__':

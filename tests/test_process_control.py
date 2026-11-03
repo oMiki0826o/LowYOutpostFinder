@@ -1,0 +1,73 @@
+"""Failing regression cases for stopping the entire native scanner subprocess tree."""
+import os
+import signal
+import subprocess
+import unittest
+from unittest.mock import MagicMock, patch
+from threading import Event
+
+from lowy_outpost_finder.native_bootstrap import _command, BootstrapError
+
+from lowy_outpost_finder.process_control import launch_scanner, stop_scanner
+
+
+class ProcessControlTests(unittest.TestCase):
+    @unittest.skipIf(os.name == 'nt', 'POSIX process-group contract')
+    def test_scanner_is_started_in_separate_process_session(self):
+        with patch('lowy_outpost_finder.process_control.subprocess.Popen') as spawn:
+            launch_scanner(['python3', '-V'], cwd='.')
+            self.assertTrue(spawn.call_args.kwargs['start_new_session'])
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX process-group contract')
+    def test_stop_terminates_process_group_not_only_python_parent(self):
+        process = MagicMock(spec=subprocess.Popen)
+        process.pid = 9876
+        process.poll.return_value = None
+        with patch('lowy_outpost_finder.process_control.os.killpg') as kill_group:
+            stop_scanner(process)
+        kill_group.assert_called_once_with(9876, signal.SIGTERM)
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX process-group contract')
+    def test_already_gone_process_is_safe(self):
+        process = MagicMock(spec=subprocess.Popen)
+        process.pid = 9876
+        process.poll.return_value = None
+        with patch('lowy_outpost_finder.process_control.os.killpg') as kill_group:
+            with patch('lowy_outpost_finder.process_control.subprocess.run') as child:
+                with patch('lowy_outpost_finder.process_control.os.name', 'posix'):
+                    kill_group.side_effect = ProcessLookupError()
+                    stop_scanner(process)
+                    child.assert_not_called()
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX native compiler cancellation')
+    def test_cancelled_first_run_compilation_stops_child_process_group(self):
+        process = MagicMock(spec=subprocess.Popen)
+        process.pid = 9123
+        process.poll.return_value = None
+        process.communicate.side_effect = [
+            subprocess.TimeoutExpired('cmake', 0.4),
+            ('', None),
+        ]
+        stop = Event()
+        stop.set()
+        with patch('lowy_outpost_finder.native_bootstrap.subprocess.Popen',
+                   return_value=process):
+            with patch('lowy_outpost_finder.process_control.os.killpg') as kill_group:
+                with self.assertRaisesRegex(BootstrapError, 'cancelled'):
+                    _command(['cmake', '--version'], cancel_event=stop)
+                kill_group.assert_called_once_with(9123, signal.SIGTERM)
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows taskkill tree contract')
+    def test_windows_stop_terminates_entire_tree(self):
+        process = MagicMock(spec=subprocess.Popen)
+        process.pid = 1234
+        process.poll.return_value = None
+        with patch('lowy_outpost_finder.process_control.subprocess.run') as terminate_tree:
+            terminate_tree.return_value.returncode = 0
+            stop_scanner(process)
+            command = terminate_tree.call_args.args[0]
+            self.assertEqual(command, ['taskkill', '/PID', '1234', '/T', '/F'])
+
+
+if __name__ == '__main__':
+    unittest.main()
