@@ -52,7 +52,7 @@ class SimpleHomeTkTests(unittest.TestCase):
         app._on_close()
         self.assertTrue(app._closing)
         self.assertIsNone(app._poll_id)
-        self.app = None
+        del self.app
 
     def test_legacy_window_cancelled_resize_does_not_access_destroyed_form(self):
         advanced = LegacyApp()
