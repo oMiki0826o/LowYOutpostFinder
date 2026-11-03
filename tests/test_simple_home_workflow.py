@@ -68,6 +68,25 @@ class SimpleWorkflowTests(unittest.TestCase):
                      'distance_from_center','distance_from_origin','chunk_x','chunk_z','status'])
                 self.assertEqual(len(list(reader)), 2)
 
+    def test_distance_ranking_uses_exact_squared_distance_before_rounding(self):
+        req = SimpleRequest(seed='3', radius='30000000', top='2')
+        with tempfile.TemporaryDirectory() as td:
+            raw = Path(td) / 'raw.csv'
+            with raw.open('w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=(
+                    'version', 'seed', 'chunk_x', 'chunk_z', 'x', 'z',
+                    'projected_structure_center_y', 'classification'))
+                writer.writeheader()
+                for cx in (-2, -1):
+                    writer.writerow(dict(
+                        version='1.21.8', seed='3', chunk_x=cx, chunk_z=1250000,
+                        x=cx*16, z=20000000,
+                        projected_structure_center_y=-40,
+                        classification='estimated_only'))
+            rows = export_results(raw, Path(td) / 'public.csv', req)
+            self.assertEqual(rows[0]['x'], -16)
+            self.assertEqual(rows[1]['x'], -32)
+
     def test_csv_rejects_y_above_threshold_or_fake_verified_status(self):
         req = SimpleRequest(seed='1')
         for status,y in [('estimated_only','-37'), ('verified_tower','-54')]:
