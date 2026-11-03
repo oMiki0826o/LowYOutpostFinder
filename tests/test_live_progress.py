@@ -70,9 +70,9 @@ class PortableCarverPatchTests(unittest.TestCase):
     def test_pinned_constant_check_preserves_semantics(self):
         from scripts.build_native import _fix_upstream_carver
         original = (
-            "#define MC_SIN_SCALE 0x1.45f306dc9c883p13\\n"
-            "_Static_assert(MC_SIN_SCALE == 10430.378350470453,\\n"
-            '               "MC_SIN_SCALE must be the exact double 10430.378350470453d");\\n'
+            "#define MC_SIN_SCALE 0x1.45f306dc9c883p13\n"
+            "_Static_assert(MC_SIN_SCALE == 10430.378350470453,\n"
+            '               "MC_SIN_SCALE must be the exact double 10430.378350470453d");\n'
         )
         with tempfile.TemporaryDirectory() as folder:
             source = Path(folder) / 'carver.c'
@@ -86,8 +86,8 @@ class PortableCarverPatchTests(unittest.TestCase):
         from scripts.build_native import _fix_upstream_carver
         with tempfile.TemporaryDirectory() as folder:
             (Path(folder) / 'carver.c').write_text(
-                '#define MC_SIN_SCALE 42.0\\n'
-                '_Static_assert(MC_SIN_SCALE == 42.0, "changed");\\n',
+                '#define MC_SIN_SCALE 42.0\n'
+                '_Static_assert(MC_SIN_SCALE == 42.0, "changed");\n',
                 encoding='utf-8')
             with self.assertRaisesRegex(RuntimeError, 'upstream'):
                 _fix_upstream_carver(Path(folder))
