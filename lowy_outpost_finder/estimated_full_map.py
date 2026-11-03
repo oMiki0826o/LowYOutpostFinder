@@ -19,6 +19,69 @@ from .cli import OUTPOST, is_candidate_start, write_csv
 from .full_map import MAX_TOP, RegionGrid, WORLD_EDGE, rank
 from .worldgen_assets import OUTPOST_ASSET_MODEL
 
+
+def _run_native_with_progress(command: list[str], on_progress=None):
+    """Drain both pipes concurrently, preserving JSON stdout and live telemetry.
+
+    The ordinary path deliberately keeps subprocess.run compatibility for callers
+    and tests not subscribing to progress.
+    """
+    if on_progress is None:
+        return subprocess.run(command, capture_output=True, text=True, timeout=3600, check=False)
+
+    from collections import deque
+    from threading import Thread
+
+    output: list[str] = []
+    errors: list[Exception] = []
+    stderr_tail = deque(maxlen=256)
+    proc = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        encoding="utf-8", errors="replace", bufsize=1,
+    )
+
+    def read_stdout():
+        try:
+            if proc.stdout is not None:
+                output.append(proc.stdout.read())
+        except OSError as exc:
+            errors.append(exc)
+
+    def read_stderr():
+        try:
+            if proc.stderr is None:
+                return
+            for line in proc.stderr:
+                stderr_tail.append(line)
+                parts = line.split()
+                if len(parts) != 5 or parts[0] != "LOWY_NATIVE_PROGRESS":
+                    continue
+                try:
+                    regions, next_ring, kept, accepted = map(int, parts[1:])
+                except ValueError:
+                    continue
+                if min(regions, next_ring, kept, accepted) < 0 or kept > accepted:
+                    continue
+                on_progress(regions, next_ring, kept, accepted)
+        except Exception as exc:
+            errors.append(exc)
+
+    readers = [Thread(target=read_stdout, daemon=True), Thread(target=read_stderr, daemon=True)]
+    for reader in readers:
+        reader.start()
+    try:
+        proc.wait(timeout=3600)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        raise
+    finally:
+        for reader in readers:
+            reader.join(timeout=10)
+    if errors:
+        raise RuntimeError(f"Native progress stream failed: {errors[0]}")
+    return subprocess.CompletedProcess(command, proc.returncode, "".join(output), "".join(stderr_tail))
+
 FIELDS = ("version", "seed", "chunk_x", "chunk_z", "x", "z", "distance_sq",
           "projected_surface_y", "projected_base_plate_y", "sample_x", "sample_z",
           "rotation", "biome_id", "classification")
@@ -142,14 +205,14 @@ def scan_native_estimate(grid: RegionGrid, cfg: EstimatedScanConfig, start: int,
 
 
 def scan_native_strict_nearest(grid: RegionGrid, cfg: EstimatedScanConfig, start_ring: int,
-                               ring_count: int, wanted: int, binary: Path) -> tuple[list[dict], int, int, int, int, bool, str]:
+                               ring_count: int, wanted: int, binary: Path, on_progress=None) -> tuple[list[dict], int, int, int, int, bool, str]:
     command = [str(binary), "--json", "--seed", str(cfg.seed), "--x-min", str(grid.x_min),
                "--x-max", str(grid.x_max), "--z-min", str(grid.z_min), "--z-max", str(grid.z_max),
                "--center-x", str(cfg.center_x), "--center-z", str(cfg.center_z),
                "--start-ring", str(start_ring), "--ring-count", str(ring_count), "--max-y", str(cfg.max_y),
                "--top", str(wanted), "--template-width", str(cfg.template_width),
                "--template-depth", str(cfg.template_depth), "--threads", str(cfg.threads)]
-    result = subprocess.run(command, capture_output=True, text=True, timeout=3600, check=False)
+    result = _run_native_with_progress(command, on_progress)
     if result.returncode:
         raise RuntimeError(f"Native strict estimated scan failed (exit={result.returncode}): {result.stderr[-1200:]}")
     try:
@@ -293,10 +356,25 @@ def scan_estimated_nearest(cfg: EstimatedScanConfig, out: Path, *, resume: bool 
     while (len(rows) < cfg.top and state["processed_rings"] <= max_ring
            and (max_batches == 0 or batches < max_batches)):
         rings = min(cfg.batch_regions, 512, max_ring - state["processed_rings"] + 1)
+        start_ring = state["processed_rings"]
+        completed_before = (2 * start_ring - 1) ** 2 if start_ring else 0
+
+        def report_native(regions, current_ring, kept_now, accepted):
+            if progress is None:
+                return
+            snapshot = dict(state)
+            snapshot["processed_rings"] = current_ring
+            snapshot["scanned_regions"] = completed_before + regions
+            snapshot["estimated_height_passes"] = state["estimated_height_passes"] + accepted
+            snapshot["status"] = "running"
+            progress(snapshot)
+
+        live = {"on_progress": report_native} if progress else {}
         native_rows, matches, biome_passes, passes, next_ring, stopped, model = scan_native_strict_nearest(
-            grid, cfg, state["processed_rings"], rings, cfg.top - len(rows), Path(binary))
+            grid, cfg, start_ring, rings, cfg.top - len(rows), Path(binary), **live)
         rows.extend(native_rows)
         state.update(processed_rings=next_ring,
+                     scanned_regions=(2 * next_ring - 1) ** 2 if next_ring else 0,
                      placement_candidates=state["placement_candidates"] + matches,
                      estimated_biome_passes=state.get("estimated_biome_passes", 0) + biome_passes,
                      estimated_height_passes=state["estimated_height_passes"] + passes,

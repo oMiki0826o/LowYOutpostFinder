@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -361,6 +362,11 @@ int main(int argc,char **argv) {
         int64_t next_ring=o.start_ring;
         StrictSession *session=strict_session_open(&o);
         if(!session){perror("strict worker session");free(hits);return 1;}
+        time_t last_progress=(time_t)-1;
+        if(o.json){
+            fprintf(stderr,"LOWY_NATIVE_PROGRESS 0 %" PRId64 " 0 0\n",o.start_ring);
+            fflush(stderr);
+        }
         for(int64_t ring=o.start_ring;ring<o.start_ring+o.ring_count;ring++){
             int remaining=o.limit-kept;
             Hit *ring_hits=calloc((size_t)remaining,sizeof(*ring_hits));
@@ -372,6 +378,15 @@ int main(int argc,char **argv) {
             for(int j=0;j<ring_kept;j++)hits[kept++]=ring_hits[j];
             free(ring_hits);
             next_ring=ring+1;
+            if(o.json){
+                time_t now=time(NULL);
+                if(now!=last_progress || kept>=o.limit || next_ring==o.start_ring+o.ring_count){
+                    fprintf(stderr,"LOWY_NATIVE_PROGRESS %" PRIu64 " %" PRId64 " %d %" PRIu64 "\n",
+                            region_count,next_ring,kept,below_y);
+                    fflush(stderr);
+                    last_progress=now;
+                }
+            }
             if(kept>=o.limit)break;
         }
         if(o.json){
